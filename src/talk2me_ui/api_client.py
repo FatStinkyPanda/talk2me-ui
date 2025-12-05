@@ -83,7 +83,7 @@ class Talk2MeAPIClient:
             )
             raise requests.RequestException(f"API request failed: {e}") from e
 
-    def _parse_json_response(self, response: requests.Response) -> dict[str, Any]:
+    def _parse_json_response(self, response: requests.Response) -> Any:
         """
         Parse JSON response from the API.
 
@@ -257,10 +257,43 @@ class Talk2MeAPIClient:
         files = {}
 
         if samples:
-            for i, sample in enumerate(samples):
+            for _i, sample in enumerate(samples):
                 files["samples"] = sample  # FastAPI expects multiple files with same key
 
         response = self._make_request("POST", "/voices", data=data, files=files)
+        return self._parse_json_response(response)
+
+    def update_voice(
+        self, voice_id: str, name: str | None = None, language: str | None = None
+    ) -> dict[str, Any]:
+        """
+        Update a voice profile.
+
+        Args:
+            voice_id: Identifier of the voice to update
+            name: New display name (optional)
+            language: New language code (optional)
+
+        Returns:
+            Update confirmation response
+
+        Raises:
+            requests.RequestException: For network errors
+            ValueError: For invalid parameters or responses
+        """
+        if not voice_id.strip():
+            raise ValueError("Voice ID cannot be empty")
+
+        data = {}
+        if name is not None:
+            data["name"] = name
+        if language is not None:
+            data["language"] = language
+
+        if not data:
+            raise ValueError("At least one field must be provided for update")
+
+        response = self._make_request("PUT", f"/voices/{voice_id}", json=data)
         return self._parse_json_response(response)
 
     def delete_voice(self, voice_id: str) -> dict[str, Any]:
@@ -304,7 +337,7 @@ class Talk2MeAPIClient:
             raise ValueError("At least one sample file is required")
 
         files = {}
-        for i, sample in enumerate(samples):
+        for _i, sample in enumerate(samples):
             files["samples"] = sample
 
         response = self._make_request("POST", f"/voices/{voice_id}/samples", files=files)

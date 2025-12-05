@@ -880,17 +880,14 @@ server {
 #### Common Issues
 
 1. **"Model not found"**
-
    - Run `python scripts/download_models.py`
    - Check `models/` directory permissions
 
 2. **"Audio device not found"**
-
    - Verify microphone/speaker connections
    - Check audio device permissions
 
 3. **"CUDA out of memory"**
-
    - Reduce TTS batch size
    - Use CPU mode if available
 

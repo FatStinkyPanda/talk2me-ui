@@ -229,7 +229,7 @@ class TestConversationSession:
         return ConversationSession("test_conv", "ws://test-backend.com/ws", manager)
 
     @pytest.mark.asyncio
-    @patch("talk2me_ui.conversation_manager.websockets.connect")
+    @patch("talk2me_ui.conversation_manager.websockets.connect", new_callable=AsyncMock)
     async def test_start_session(self, mock_ws_connect, session):
         """Test starting a conversation session."""
         mock_backend_ws = AsyncMock()
@@ -240,6 +240,9 @@ class TestConversationSession:
         assert session.is_active is True
         assert session.backend_ws == mock_backend_ws
         mock_ws_connect.assert_called_once_with("ws://test-backend.com/ws")
+
+        # Stop the session to prevent infinite loop in background task
+        await session.stop()
 
     @pytest.mark.asyncio
     async def test_start_session_no_backend_url(self, session):

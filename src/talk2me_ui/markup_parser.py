@@ -6,6 +6,7 @@ used in audiobook text, extracting sections with voice assignments,
 sound effects, and background audio.
 """
 
+import contextlib
 import logging
 import re
 from dataclasses import dataclass
@@ -20,7 +21,7 @@ class MarkupSection:
 
     text: str
     voice: str | None = None
-    sound_effects: list[str] = None
+    sound_effects: list[dict[str, Any]] | None = None
     background_audio: dict[str, Any] | None = None
 
     def __post_init__(self):
@@ -51,6 +52,7 @@ class AudiobookMarkupParser:
     def __init__(self):
         self.current_voice = None
         self.current_background = None
+        self.current_sfx: list[dict[str, Any]] = []
 
     def parse(self, text: str) -> list[MarkupSection]:
         """
@@ -72,7 +74,6 @@ class AudiobookMarkupParser:
 
         sections = []
         current_text = ""
-        current_sfx = []
 
         # Split text by markup tags
         parts = self.MARKUP_PATTERN.split(text)
@@ -88,12 +89,12 @@ class AudiobookMarkupParser:
                         MarkupSection(
                             text=current_text.strip(),
                             voice=self.current_voice,
-                            sound_effects=current_sfx.copy(),
+                            sound_effects=self.current_sfx.copy(),
                             background_audio=self.current_background,
                         )
                     )
                     current_text = ""
-                    current_sfx = []
+                    self.current_sfx = []
 
                 # Parse the markup
                 self._parse_markup(part)
@@ -104,7 +105,7 @@ class AudiobookMarkupParser:
                 MarkupSection(
                     text=current_text.strip(),
                     voice=self.current_voice,
-                    sound_effects=current_sfx.copy(),
+                    sound_effects=self.current_sfx.copy(),
                     background_audio=self.current_background,
                 )
             )
@@ -137,10 +138,8 @@ class AudiobookMarkupParser:
             for match in self.OPTION_PATTERN.finditer(option_str):
                 key, val = match.groups()
                 # Try to convert to number
-                try:
+                with contextlib.suppress(ValueError):
                     val = float(val)
-                except ValueError:
-                    pass
                 options[key.strip()] = val
         else:
             value = value_part
@@ -149,8 +148,7 @@ class AudiobookMarkupParser:
             self.current_voice = value
         elif command == "sfx":
             # Sound effects are added to current section
-            # This will be handled when creating sections
-            pass  # Handled in parse method
+            self.current_sfx.append({"id": value, **options})
         elif command == "bg":
             if value.lower() == "stop":
                 self.current_background = None

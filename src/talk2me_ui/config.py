@@ -42,7 +42,7 @@ class AudioConfig(BaseModel):
 class UIConfig(BaseModel):
     """Configuration for UI server settings."""
 
-    host: str = Field(default="0.0.0.0", description="UI server host")
+    host: str = Field(default="127.0.0.1", description="UI server host")
     port: int = Field(default=8000, ge=1, le=65535, description="UI server port")
 
 
@@ -79,13 +79,13 @@ def load_yaml_config(file_path: Path) -> dict[str, Any]:
         return config_data
     except FileNotFoundError:
         logger.error("Configuration file not found", extra={"file_path": str(file_path)})
-        raise FileNotFoundError(f"Configuration file not found: {file_path}")
+        raise FileNotFoundError(f"Configuration file not found: {file_path}") from None
     except yaml.YAMLError as e:
         logger.error(
             "Invalid YAML in configuration file",
             extra={"file_path": str(file_path), "error": str(e)},
         )
-        raise yaml.YAMLError(f"Invalid YAML in {file_path}: {e}")
+        raise yaml.YAMLError(f"Invalid YAML in {file_path}: {e}") from e
 
 
 def merge_configs(base_config: dict[str, Any], override_config: dict[str, Any]) -> dict[str, Any]:
@@ -179,7 +179,7 @@ def load_config(
         logger.error(
             "Configuration validation failed", extra={"validation_errors": str(e)}, exc_info=True
         )
-        raise ValueError(f"Configuration validation failed: {e}")
+        raise ValueError(f"Configuration validation failed: {e}") from e
 
 
 # Global configuration instance

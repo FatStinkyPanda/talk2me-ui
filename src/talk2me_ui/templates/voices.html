@@ -51,9 +51,9 @@
                     <label class="form-label">Voice Samples *</label>
                     <div class="file-upload">
                         <div class="file-upload-icon">🎤</div>
-                        <div class="file-upload-text">Choose audio files or drag them here</div>
-                        <div class="file-upload-hint">WAV format recommended, 5-30 seconds each, minimum 3 samples</div>
-                        <input type="file" name="samples" class="file-input" multiple accept="audio/*" required>
+                        <div class="file-upload-text">Choose WAV files or drag them here</div>
+                        <div class="file-upload-hint">3-10 WAV files, 16-bit mono, 5-30 seconds each</div>
+                        <input type="file" name="samples" class="file-input" multiple accept=".wav,audio/wav" required>
                     </div>
                     <div class="sample-files-list" id="sample-files-list"></div>
                 </div>
@@ -125,6 +125,89 @@
         </div>
     </div>
 </div>
+
+<!-- Edit Voice Modal -->
+<div id="edit-voice-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Voice</h3>
+            <button class="modal-close" onclick="closeEditModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="edit-voice-form" data-action="/api/voices" data-method="PUT">
+                <input type="hidden" id="edit-voice-id" name="id">
+                <div class="form-group">
+                    <label for="edit-voice-name" class="form-label">Voice Name *</label>
+                    <input type="text" id="edit-voice-name" name="name" class="form-input" required minlength="2"
+                        placeholder="e.g., John Smith">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-voice-language" class="form-label">Language *</label>
+                    <select id="edit-voice-language" name="language" class="form-select" required>
+                        <option value="">Select language...</option>
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="it">Italian</option>
+                        <option value="pt">Portuguese</option>
+                        <option value="ru">Russian</option>
+                        <option value="ja">Japanese</option>
+                        <option value="ko">Korean</option>
+                        <option value="zh">Chinese</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-voice-description" class="form-label">Description</label>
+                    <textarea id="edit-voice-description" name="description" class="form-textarea" rows="3"
+                        placeholder="Optional description of the voice characteristics..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Update Voice Samples (Optional)</label>
+                    <div class="file-upload">
+                        <div class="file-upload-icon">🎤</div>
+                        <div class="file-upload-text">Choose new WAV files or drag them here</div>
+                        <div class="file-upload-hint">3-10 WAV files, 16-bit mono, 5-30 seconds each</div>
+                        <input type="file" name="samples" class="file-input" multiple accept=".wav,audio/wav">
+                    </div>
+                    <div class="sample-files-list" id="edit-sample-files-list"></div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Update Voice</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Voice Modal -->
+<div id="delete-voice-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Delete Voice</h3>
+            <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="delete-confirmation">
+                <div class="delete-icon">⚠️</div>
+                <div class="delete-message">
+                    <p>Are you sure you want to delete the voice "<span id="delete-voice-name"></span>"?</p>
+                    <p class="delete-warning">This action cannot be undone. All associated data will be permanently
+                        removed.</p>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-danger" onclick="confirmDeleteVoice()">Delete Voice</button>
+                <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -135,6 +218,7 @@
 
         // Initialize file upload handling
         initializeVoiceFileUpload();
+        initializeEditVoiceFileUpload();
 
         // Update voices list every 30 seconds
         setInterval(loadVoices, 30000);
@@ -212,13 +296,22 @@
         document.getElementById('sample-files-list').innerHTML = '';
     }
 
+    function initializeEditVoiceFileUpload() {
+        const fileInput = document.querySelector('#edit-voice-form .file-input');
+        const filesList = document.getElementById('edit-sample-files-list');
+
+        fileInput.addEventListener('change', function (e) {
+            updateSampleFilesList(e.target.files, filesList);
+        });
+    }
+
     async function loadVoices() {
         try {
             const response = await fetch('/api/voices');
             if (!response.ok) throw new Error('Failed to load voices');
 
-            const voices = await response.json();
-            renderVoices(voices);
+            const data = await response.json();
+            renderVoices(data.voices || []);
 
         } catch (error) {
             console.error('Failed to load voices:', error);
@@ -286,14 +379,61 @@
     }
 
     async function editVoice(voiceId) {
-        // Placeholder for voice editing functionality
-        showSuccess('Voice editing feature coming soon!');
+        try {
+            const response = await fetch(`/api/voices/${voiceId}`);
+            if (!response.ok) throw new Error('Failed to load voice data');
+
+            const voice = await response.json();
+
+            // Populate edit form
+            document.getElementById('edit-voice-id').value = voice.id;
+            document.getElementById('edit-voice-name').value = voice.name;
+            document.getElementById('edit-voice-language').value = voice.language;
+            document.getElementById('edit-voice-description').value = voice.description || '';
+
+            // Clear previous file selection
+            document.getElementById('edit-sample-files-list').innerHTML = '';
+
+            // Show modal
+            document.getElementById('edit-voice-modal').classList.add('show');
+
+        } catch (error) {
+            showError('Failed to load voice for editing: ' + error.message);
+        }
+    }
+
+    function closeEditModal() {
+        document.getElementById('edit-voice-modal').classList.remove('show');
+        document.getElementById('edit-voice-form').reset();
     }
 
     async function deleteVoice(voiceId) {
-        if (!confirm('Are you sure you want to delete this voice? This action cannot be undone.')) {
-            return;
+        try {
+            const response = await fetch(`/api/voices/${voiceId}`);
+            if (!response.ok) throw new Error('Failed to load voice data');
+
+            const voice = await response.json();
+
+            // Populate delete modal
+            document.getElementById('delete-voice-name').textContent = voice.name;
+            document.getElementById('delete-voice-modal').dataset.voiceId = voiceId;
+
+            // Show modal
+            document.getElementById('delete-voice-modal').classList.add('show');
+
+        } catch (error) {
+            showError('Failed to load voice for deletion: ' + error.message);
         }
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('delete-voice-modal').classList.remove('show');
+        delete document.getElementById('delete-voice-modal').dataset.voiceId;
+    }
+
+    async function confirmDeleteVoice() {
+        const voiceId = document.getElementById('delete-voice-modal').dataset.voiceId;
+        if (!voiceId) return;
 
         try {
             showProgressModal('Deleting voice...');
@@ -306,6 +446,7 @@
 
             showSuccess('Voice deleted successfully');
             loadVoices(); // Refresh the list
+            closeDeleteModal();
 
         } catch (error) {
             showError('Failed to delete voice: ' + error.message);

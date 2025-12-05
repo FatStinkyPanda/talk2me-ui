@@ -131,11 +131,13 @@ class TestAPIEndpoints:
     @patch("talk2me_ui.main.BackgroundTasks")
     @patch("talk2me_ui.main.tempfile.NamedTemporaryFile")
     @patch("talk2me_ui.main.os.unlink")
-    def test_stt_upload(self, mock_unlink, mock_tempfile, mock_bg_tasks, mock_api_client, client):
+    def test_stt_upload(self, _mock_unlink, mock_tempfile, mock_bg_tasks, mock_api_client, client):
         """Test STT upload endpoint."""
         # Mock tempfile
+        import tempfile
+
         mock_temp = Mock()
-        mock_temp.name = "/tmp/test.wav"
+        mock_temp.name = tempfile.gettempdir() + "/test.wav"
         mock_tempfile.return_value.__enter__.return_value = mock_temp
 
         # Mock API client
@@ -406,26 +408,32 @@ class TestBackgroundTasks:
     @patch("talk2me_ui.main.os.unlink")
     async def test_process_stt_success(self, mock_unlink, mock_api_client):
         """Test successful STT processing."""
+        import tempfile
+
+        test_path = tempfile.gettempdir() + "/test.wav"
         mock_api_client.stt_transcribe.return_value = {"text": "Hello world"}
 
-        await process_stt("task123", "/tmp/test.wav", 16000)
+        await process_stt("task123", test_path, 16000)
 
         assert stt_tasks["task123"]["status"] == "completed"
         assert stt_tasks["task123"]["result"]["text"] == "Hello world"
-        mock_unlink.assert_called_once_with("/tmp/test.wav")
+        mock_unlink.assert_called_once_with(test_path)
 
     @pytest.mark.asyncio
     @patch("talk2me_ui.main.api_client")
     @patch("talk2me_ui.main.os.unlink")
     async def test_process_stt_failure(self, mock_unlink, mock_api_client):
         """Test STT processing failure."""
+        import tempfile
+
+        test_path = tempfile.gettempdir() + "/test.wav"
         mock_api_client.stt_transcribe.side_effect = Exception("API error")
 
-        await process_stt("task123", "/tmp/test.wav")
+        await process_stt("task123", test_path)
 
         assert stt_tasks["task123"]["status"] == "failed"
         assert "API error" in stt_tasks["task123"]["error"]
-        mock_unlink.assert_called_once_with("/tmp/test.wav")
+        mock_unlink.assert_called_once_with(test_path)
 
     @pytest.mark.asyncio
     @patch("talk2me_ui.main.api_client")
@@ -500,8 +508,6 @@ class TestExceptionHandlers:
 
     def test_global_exception_handler(self):
         """Test global exception handler."""
-        client = TestClient(app)
-
         # Trigger an exception by accessing a non-existent route that might cause issues
         # Since we have a catch-all handler, we can test it by mocking an internal error
 

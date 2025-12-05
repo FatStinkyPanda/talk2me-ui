@@ -73,8 +73,10 @@ async function updateSidebarData() {
     // Update voice count
     const voiceResponse = await fetch("/api/voices");
     if (voiceResponse.ok) {
-      const voices = await voiceResponse.json();
-      document.getElementById("voice-count").textContent = voices.length;
+      const data = await voiceResponse.json();
+      document.getElementById("voice-count").textContent = (
+        data.voices || []
+      ).length;
     }
 
     // Update project count (placeholder)
@@ -108,11 +110,26 @@ async function handleFormSubmit(event) {
 
   const form = event.target;
   const formData = new FormData(form);
-  const action = form.getAttribute("data-action") || form.action;
+  let action = form.getAttribute("data-action") || form.action;
+  const method = form.getAttribute("data-method") || form.method || "POST";
 
   if (!action) {
     showError("Form action not specified");
     return;
+  }
+
+  // Handle voice forms specially
+  if (form.id === "create-voice-form" || form.id === "edit-voice-form") {
+    return handleVoiceFormSubmit(form, formData, action, method);
+  }
+
+  // Check if form has files
+  const hasFiles = Array.from(formData.values()).some(
+    (value) => value instanceof File,
+  );
+
+  if (hasFiles) {
+    return handleFileUploadForm(form, formData, action, method);
   }
 
   // Show progress modal
@@ -120,7 +137,7 @@ async function handleFormSubmit(event) {
 
   try {
     const response = await fetch(action, {
-      method: form.method || "POST",
+      method: method,
       body: formData,
       headers: {
         Accept: "application/json",
@@ -203,6 +220,169 @@ function clearValidationError(event) {
   if (input.classList.contains("error")) {
     clearInputError(input);
   }
+}
+
+async function handleVoiceFormSubmit(form, formData, action, method) {
+  // Validate voice samples
+  const sampleFiles = formData.getAll("samples");
+  if (sampleFiles.length > 0) {
+    const validation = await validateVoiceSamples(sampleFiles);
+    if (!validation.valid) {
+      showError(validation.message);
+      return;
+    }
+  }
+
+  // For edit, append voice ID to action
+  if (form.id === "edit-voice-form") {
+    const voiceId = formData.get("id");
+    if (voiceId) {
+      action = `${action}/${voiceId}`;
+    }
+  }
+
+  // Handle file upload with progress
+  return handleFileUploadForm(form, formData, action, method);
+}
+
+async function handleFileUploadForm(form, formData, action, method) {
+  showProgressModal("Uploading files...");
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable) {
+        const percentComplete = (event.loaded / event.total) * 100;
+        updateProgress(
+          percentComplete,
+          `Uploading... ${Math.round(percentComplete)}%`,
+        );
+      }
+    });
+
+    xhr.addEventListener("load", () => {
+      closeProgressModal();
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const result = JSON.parse(xhr.responseText);
+          showSuccess(result.message || "Operation completed successfully");
+          form.reset();
+
+          // Clear file lists
+          const fileLists = form.querySelectorAll(".sample-files-list");
+          fileLists.forEach((list) => (list.innerHTML = ""));
+
+          // Refresh sidebar data
+          updateSidebarData();
+
+          // Refresh page content if needed
+          if (form.getAttribute("data-refresh") === "true") {
+            setTimeout(() => location.reload(), 1500);
+          }
+
+          // Close modals if any
+          if (form.id === "edit-voice-form") {
+            closeEditModal();
+          }
+
+          resolve();
+        } catch (error) {
+          showError("Invalid response from server");
+          reject(error);
+        }
+      } else {
+        try {
+          const result = JSON.parse(xhr.responseText);
+          showError(result.detail || result.message || "Operation failed");
+        } catch {
+          showError("Operation failed");
+        }
+        reject(new Error("Request failed"));
+      }
+    });
+
+    xhr.addEventListener("error", () => {
+      closeProgressModal();
+      showError("Network error occurred");
+      reject(new Error("Network error"));
+    });
+
+    xhr.open(method, action);
+    xhr.setRequestHeader("Accept", "application/json");
+    xhr.send(formData);
+  });
+}
+
+async function validateVoiceSamples(files) {
+  if (files.length === 0) return { valid: true };
+
+  // Check count
+  if (files.length < 3 || files.length > 10) {
+    return {
+      valid: false,
+      message: "Please upload between 3 and 10 voice samples",
+    };
+  }
+
+  // Check file types
+  for (const file of files) {
+    if (
+      !file.name.toLowerCase().endsWith(".wav") &&
+      !file.type.includes("audio/wav")
+    ) {
+      return { valid: false, message: "All files must be WAV format" };
+    }
+
+    // Check file size (rough check, WAV files are typically small)
+    if (file.size > 50 * 1024 * 1024) {
+      // 50MB max
+      return {
+        valid: false,
+        message: "File size too large. Maximum 50MB per file",
+      };
+    }
+  }
+
+  // Check durations
+  for (const file of files) {
+    try {
+      const duration = await getAudioDuration(file);
+      if (duration < 5 || duration > 30) {
+        return {
+          valid: false,
+          message: `Audio duration must be between 5-30 seconds. File "${file.name}" is ${duration.toFixed(1)} seconds`,
+        };
+      }
+    } catch (error) {
+      return {
+        valid: false,
+        message: `Could not validate audio file "${file.name}". Please ensure it's a valid WAV file`,
+      };
+    }
+  }
+
+  return { valid: true };
+}
+
+function getAudioDuration(file) {
+  return new Promise((resolve, reject) => {
+    const audio = new Audio();
+    const url = URL.createObjectURL(file);
+
+    audio.addEventListener("loadedmetadata", () => {
+      URL.revokeObjectURL(url);
+      resolve(audio.duration);
+    });
+
+    audio.addEventListener("error", () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not load audio"));
+    });
+
+    audio.src = url;
+  });
 }
 
 /**
@@ -553,6 +733,17 @@ function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
+}
+
+function closeEditModal() {
+  const modal = document.getElementById("edit-voice-modal");
+  if (modal) {
+    modal.classList.remove("show");
+  }
+  const form = document.getElementById("edit-voice-form");
+  if (form) {
+    form.reset();
+  }
 }
 
 // Export functions for global use

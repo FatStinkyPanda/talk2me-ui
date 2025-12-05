@@ -9,7 +9,7 @@ import functools
 import re
 from collections.abc import Callable
 
-from fastapi import Request
+from fastapi import Request, UploadFile
 
 from .config import get_config
 from .exceptions import ValidationError
@@ -240,8 +240,6 @@ def validate_file_upload(
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
-            from fastapi import UploadFile
-
             # Find UploadFile parameters
             for key, value in kwargs.items():
                 if isinstance(value, UploadFile):
@@ -258,7 +256,7 @@ def validate_file_upload(
 
 def _validate_uploaded_file(
     field_name: str,
-    file: "UploadFile",
+    file: UploadFile,
     allowed_extensions: list[str] | None,
     max_size: int | None,
     allowed_mime_types: list[str] | None,
@@ -268,7 +266,7 @@ def _validate_uploaded_file(
     if allowed_extensions:
         from pathlib import Path
 
-        ext = Path(file.filename).suffix.lower()
+        ext = Path(file.filename or "").suffix.lower()
         if ext not in [e.lower() for e in allowed_extensions]:
             raise ValidationError(
                 f"File type not allowed. Allowed extensions: {', '.join(allowed_extensions)}",
@@ -333,10 +331,7 @@ class InputSanitizer:
         # Limit length
         if len(filename) > 255:
             name, ext = filename.rsplit(".", 1) if "." in filename else (filename, "")
-            if ext:
-                filename = name[:250] + "." + ext
-            else:
-                filename = filename[:255]
+            filename = name[:250] + "." + ext if ext else filename[:255]
 
         return filename
 

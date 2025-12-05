@@ -88,7 +88,7 @@ class TestUIConfig:
     def test_defaults(self):
         """Test default values."""
         config = UIConfig()
-        assert config.host == "0.0.0.0"
+        assert config.host == "127.0.0.1"
         assert config.port == 8000
 
 
@@ -114,7 +114,7 @@ class TestConfig:
         assert str(config.backend.url) == "http://localhost:8000"
         assert config.audio.sample_rate == 16000
         assert config.audio.channels == 1
-        assert config.ui.host == "0.0.0.0"
+        assert config.ui.host == "127.0.0.1"
         assert config.ui.port == 8000
 
 
@@ -211,21 +211,20 @@ class TestLoadConfig:
     def test_load_default_only(self, mock_path):
         """Test loading with default config only."""
         # Mock the default config path
-        mock_default_path = Path("/fake/default.yaml")
         mock_path.return_value.parent.parent.parent = Path("/fake")
 
         with patch("talk2me_ui.config.load_yaml_config") as mock_load:
             mock_load.return_value = {
                 "backend": {"url": "http://test.com"},
                 "audio": {"sample_rate": 16000},
-                "ui": {"host": "0.0.0.0", "port": 8000},
+                "ui": {"host": "127.0.0.1", "port": 8000},
             }
 
             config = load_config()
 
             assert str(config.backend.url) == "http://test.com/"
             assert config.audio.sample_rate == 16000
-            assert config.ui.host == "0.0.0.0"
+            assert config.ui.host == "127.0.0.1"
             assert config.ui.port == 8000
 
     @patch("talk2me_ui.config.Path")

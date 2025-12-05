@@ -115,14 +115,14 @@ class ConversationManager:
         logger.info(f"Ended conversation {conversation_id}")
 
     async def handle_frontend_message(
-        self, conversation_id: str, websocket: websockets.WebSocketServerProtocol, message: str
+        self, conversation_id: str, _websocket: websockets.WebSocketServerProtocol, message: str
     ):
         """
         Handle a message from a frontend client.
 
         Args:
             conversation_id: ID of the conversation
-            websocket: Frontend WebSocket connection
+            _websocket: Frontend WebSocket connection
             message: Message data
         """
         try:

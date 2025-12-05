@@ -15,6 +15,7 @@ import sys
 import tempfile
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 from fastapi import (
@@ -201,9 +202,9 @@ api_client = Talk2MeAPIClient()
 logger = logging.getLogger("talk2me_ui.main")
 
 # Global dictionaries to track tasks
-stt_tasks = {}
-tts_tasks = {}
-audiobook_tasks = {}
+stt_tasks: dict[str, dict[str, Any]] = {}
+tts_tasks: dict[str, dict[str, Any]] = {}
+audiobook_tasks: dict[str, dict[str, Any]] = {}
 
 # Sound directories
 SFX_DIR = Path("data/sfx")
@@ -227,7 +228,7 @@ ALLOWED_AUDIO_TYPES = {
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 
 
-async def process_stt(task_id: str, tmp_path: str, sample_rate: int = None):
+async def process_stt(task_id: str, tmp_path: str, sample_rate: int | None = None):
     """
     Background task to process STT transcription.
 
@@ -330,14 +331,143 @@ async def process_audiobook(task_id: str, markup_text: str, **kwargs):
         if not sections:
             raise ValueError("No valid sections found in markup")
 
-        # Generate audio for each section
+        # Generate audio for each section with mixing
+        import math
+
         from pydub import AudioSegment
 
-        combined_audio = AudioSegment.empty()
+        # Collect all audio events with timing
+        audio_events = []
+        current_time = 0.0  # in milliseconds
+        active_bg = None  # (start_time, bg_config)
+
+        def load_sound_effect(sfx_config: dict) -> AudioSegment | None:
+            """Load and process a sound effect."""
+            sfx_id = sfx_config["id"]
+            metadata_path = SFX_DIR / f"{sfx_id}.json"
+            if not metadata_path.exists():
+                logger.warning(f"Sound effect not found: {sfx_id}", extra={"task_id": task_id})
+                return None
+
+            with open(metadata_path) as f:
+                metadata = json.load(f)
+
+            audio_path = SFX_DIR / metadata["filename"]
+            if not audio_path.exists():
+                logger.warning(
+                    f"Sound effect audio file not found: {audio_path}", extra={"task_id": task_id}
+                )
+                return None
+
+            segment = AudioSegment.from_file(audio_path)
+
+            # Apply volume
+            volume = sfx_config.get("volume", metadata.get("volume", 0.8))
+            segment = segment + (20 * math.log10(volume))  # dB adjustment
+
+            # Apply fade in/out
+            fade_in = sfx_config.get("fade_in", metadata.get("fade_in", 0.0))
+            fade_out = sfx_config.get("fade_out", metadata.get("fade_out", 0.0))
+            if fade_in > 0:
+                segment = segment.fade_in(int(fade_in * 1000))
+            if fade_out > 0:
+                segment = segment.fade_out(int(fade_out * 1000))
+
+            # Apply duration limit
+            duration = sfx_config.get("duration")
+            if duration:
+                segment = segment[: int(duration * 1000)]
+
+            return segment
+
+        def load_background_audio(bg_config: dict) -> AudioSegment | None:
+            """Load and process background audio."""
+            bg_name = bg_config["name"]
+            metadata_path = BACKGROUND_DIR / f"{bg_name}.json"
+            if not metadata_path.exists():
+                logger.warning(f"Background audio not found: {bg_name}", extra={"task_id": task_id})
+                return None
+
+            with open(metadata_path) as f:
+                metadata = json.load(f)
+
+            audio_path = BACKGROUND_DIR / metadata["filename"]
+            if not audio_path.exists():
+                logger.warning(
+                    f"Background audio file not found: {audio_path}", extra={"task_id": task_id}
+                )
+                return None
+
+            segment = AudioSegment.from_file(audio_path)
+
+            # Apply volume
+            volume = bg_config.get("volume", metadata.get("volume", 0.3))
+            segment = segment + (20 * math.log10(volume))  # dB adjustment
+
+            # Apply fade in/out
+            fade_in = bg_config.get("fade_in", metadata.get("fade_in", 1.0))
+            fade_out = bg_config.get("fade_out", metadata.get("fade_out", 1.0))
+            if fade_in > 0:
+                segment = segment.fade_in(int(fade_in * 1000))
+            if fade_out > 0:
+                segment = segment.fade_out(int(fade_out * 1000))
+
+            return segment
 
         for i, section in enumerate(sections):
+            # Handle background audio changes
+            if section.background_audio:
+                # Stop previous bg if any
+                if active_bg:
+                    start_time, bg_config = active_bg
+                    bg_segment = load_background_audio(bg_config)
+                    if bg_segment:
+                        duration = current_time - start_time
+                        if bg_config.get("loop", True):
+                            # Loop the bg for the duration
+                            looped_bg = AudioSegment.empty()
+                            while looped_bg.duration_seconds < (duration / 1000):
+                                remaining = (duration / 1000) - looped_bg.duration_seconds
+                                if remaining >= bg_segment.duration_seconds:
+                                    looped_bg += bg_segment
+                                else:
+                                    looped_bg += bg_segment[: int(remaining * 1000)]
+                        else:
+                            # Non-looping, take duration
+                            looped_bg = bg_segment[: int(duration)]
+                        audio_events.append((start_time, looped_bg))
+
+                # Start new bg
+                active_bg = (current_time, section.background_audio)
+            elif active_bg and section.background_audio is None:
+                # Explicit stop
+                start_time, bg_config = active_bg
+                bg_segment = load_background_audio(bg_config)
+                if bg_segment:
+                    duration = current_time - start_time
+                    if bg_config.get("loop", True):
+                        looped_bg = AudioSegment.empty()
+                        while looped_bg.duration_seconds < (duration / 1000):
+                            remaining = (duration / 1000) - looped_bg.duration_seconds
+                            if remaining >= bg_segment.duration_seconds:
+                                looped_bg += bg_segment
+                            else:
+                                looped_bg += bg_segment[: int(remaining * 1000)]
+                    else:
+                        looped_bg = bg_segment[: int(duration)]
+                    audio_events.append((start_time, looped_bg))
+                active_bg = None
+
+            # Handle sound effects
+            for sfx_config in section.sound_effects:
+                sfx_segment = load_sound_effect(sfx_config)
+                if sfx_segment:
+                    start_at = sfx_config.get("start_at", 0.0)
+                    sfx_start = current_time + (start_at * 1000)
+                    audio_events.append((sfx_start, sfx_segment))
+
+            # Handle voice/text
             if section.text.strip():
-                # Generate TTS for this section
                 if not section.voice:
                     raise ValueError(f"No voice specified for section: {section.text[:50]}...")
 
@@ -351,11 +481,39 @@ async def process_audiobook(task_id: str, markup_text: str, **kwargs):
                     },
                 )
                 audio_data = api_client.tts_synthesize(section.text, section.voice, **kwargs)
-                segment = AudioSegment.from_wav(io.BytesIO(audio_data))
-                combined_audio += segment
+                voice_segment = AudioSegment.from_wav(io.BytesIO(audio_data))
+                audio_events.append((current_time, voice_segment))
+                current_time += len(voice_segment)
 
-            # TODO: Add sound effects and background audio integration
-            # For now, skip sfx and bg
+        # Handle final background audio
+        if active_bg:
+            start_time, bg_config = active_bg
+            bg_segment = load_background_audio(bg_config)
+            if bg_segment:
+                duration = current_time - start_time
+                if bg_config.get("loop", True):
+                    looped_bg = AudioSegment.empty()
+                    while looped_bg.duration_seconds < (duration / 1000):
+                        remaining = (duration / 1000) - looped_bg.duration_seconds
+                        if remaining >= bg_segment.duration_seconds:
+                            looped_bg += bg_segment
+                        else:
+                            looped_bg += bg_segment[: int(remaining * 1000)]
+                else:
+                    looped_bg = bg_segment[: int(duration)]
+                audio_events.append((start_time, looped_bg))
+
+        # Mix all audio events
+        if not audio_events:
+            combined_audio = AudioSegment.empty()
+        else:
+            # Find total duration
+            max_end_time = max(start + len(segment) for start, segment in audio_events)
+            combined_audio = AudioSegment.silent(duration=max_end_time)
+
+            # Overlay all segments
+            for start_time, segment in audio_events:
+                combined_audio = combined_audio.overlay(segment, position=int(start_time))
 
         # Export combined audio
         buffer = io.BytesIO()
@@ -438,7 +596,7 @@ def save_sound_file(directory: Path, file: UploadFile, metadata: dict) -> str:
         User-provided ID of the sound
     """
     sound_id = metadata.get("id", str(uuid4()))
-    file_ext = Path(file.filename).suffix.lower()
+    file_ext = Path(file.filename or "").suffix.lower()
 
     # Save audio file
     audio_filename = f"{sound_id}{file_ext}"
@@ -644,9 +802,9 @@ async def sound_library(request: Request):
 
 @app.post("/api/stt")
 async def stt_upload(
-    audio_file: UploadFile = File(...),
+    audio_file: UploadFile = File(...),  # noqa: B008
     sample_rate: int = Form(None),
-    background_tasks: BackgroundTasks = BackgroundTasks(),
+    background_tasks: BackgroundTasks = BackgroundTasks(),  # noqa: B008
 ):
     """
     Upload audio file for speech-to-text transcription.
@@ -691,7 +849,7 @@ async def stt_upload(
         logger.error(
             "Failed to create STT task", extra={"task_id": task_id, "error": str(e)}, exc_info=True
         )
-        raise ExternalServiceError("STT service", "Failed to process upload")
+        raise ExternalServiceError("STT service", "Failed to process upload") from e
 
 
 @app.get("/api/stt/{task_id}")
@@ -731,7 +889,114 @@ async def list_voices():
         voices = api_client.list_voices()
         return voices
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.post("/api/voices")
+async def create_voice(
+    name: str = Form(...),
+    language: str = Form("en"),
+    samples: list[UploadFile] | None = None,
+):
+    """
+    Create a new voice profile.
+
+    Args:
+        name: Display name for the voice
+        language: Language code
+        samples: Audio sample files
+
+    Returns:
+        Voice creation response
+    """
+    try:
+        # Validate inputs
+        if not name.strip():
+            raise ValidationError("Voice name cannot be empty", field="name")
+
+        # Convert UploadFile to BinaryIO for api_client
+        sample_files = []
+        if samples:
+            for sample in samples:
+                if sample.filename:
+                    sample_files.append(sample.file)
+
+        result = api_client.create_voice(
+            name=name, language=language, samples=sample_files if sample_files else None
+        )
+        return result
+    except Exception as e:
+        logger.error(
+            "Voice creation failed",
+            extra={"name": name, "language": language, "error": str(e)},
+            exc_info=True,
+        )
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.put("/api/voices/{voice_id}")
+async def update_voice(
+    voice_id: str,
+    name: str = Form(None),
+    language: str = Form(None),
+    samples: list[UploadFile] | None = None,
+):
+    """
+    Update a voice profile.
+
+    Args:
+        voice_id: Voice identifier
+        name: New display name (optional)
+        language: New language code (optional)
+        samples: Additional audio sample files (optional)
+
+    Returns:
+        Voice update response
+    """
+    try:
+        # Update voice metadata
+        update_data = {}
+        if name is not None:
+            update_data["name"] = name
+        if language is not None:
+            update_data["language"] = language
+
+        if update_data:
+            api_client.update_voice(voice_id, **update_data)
+
+        # Upload additional samples if provided
+        if samples and any(sample.filename for sample in samples):
+            sample_files = [sample.file for sample in samples if sample.filename]
+            if sample_files:
+                api_client.clone_voice(voice_id, sample_files)
+
+        return {"message": "Voice updated successfully"}
+    except Exception as e:
+        logger.error(
+            "Voice update failed", extra={"voice_id": voice_id, "error": str(e)}, exc_info=True
+        )
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.delete("/api/voices/{voice_id}")
+async def delete_voice(voice_id: str):
+    """
+    Delete a voice profile.
+
+    Args:
+        voice_id: Voice identifier
+
+    Returns:
+        Deletion confirmation
+    """
+    try:
+        result = api_client.delete_voice(voice_id)
+        return result
+    except Exception as e:
+        logger.error(
+            "Voice deletion failed", extra={"voice_id": voice_id, "error": str(e)}, exc_info=True
+        )
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/tts")
@@ -742,7 +1007,7 @@ async def tts_generate(
     speed: float = Form(1.0),
     pitch: int = Form(0),
     output_format: str = Form("wav"),
-    background_tasks: BackgroundTasks = BackgroundTasks(),
+    background_tasks: BackgroundTasks = BackgroundTasks(),  # noqa: B008
 ):
     """
     Generate speech from text using specified voice and parameters.
@@ -815,7 +1080,7 @@ async def tts_generate(
         logger.error(
             "Failed to create TTS task", extra={"task_id": task_id, "error": str(e)}, exc_info=True
         )
-        raise ExternalServiceError("TTS service", "Failed to process request")
+        raise ExternalServiceError("TTS service", "Failed to process request") from e
 
 
 @app.get("/api/tts/{task_id}")
@@ -855,7 +1120,7 @@ async def tts_audio(task_id: str):
 
     import base64
 
-    audio_data = base64.b64decode(task["audio_data"])
+    audio_data = base64.b64decode(str(task["audio_data"]))
 
     from fastapi.responses import Response
 
@@ -873,7 +1138,7 @@ async def audiobook_generate(
     sample_rate: int = Form(22050),
     normalize: bool = Form(True),
     chapter_markers: bool = Form(True),
-    background_tasks: BackgroundTasks = BackgroundTasks(),
+    background_tasks: BackgroundTasks = BackgroundTasks(),  # noqa: B008
 ):
     """
     Generate an audiobook from markup text.
@@ -965,9 +1230,9 @@ async def audiobook_audio(task_id: str):
 
 @app.post("/api/sounds/effects")
 async def upload_sound_effect(
-    file: UploadFile = File(..., alias="audio_file"),
+    file: UploadFile = File(..., alias="audio_file"),  # noqa: B008
     name: str = Form(""),
-    id: str = Form(""),
+    sound_id: str = Form(""),
     category: str = Form(""),
     volume: float = Form(0.8),
     fade_in: float = Form(0.0),
@@ -994,12 +1259,12 @@ async def upload_sound_effect(
     """
     validate_audio_file(file)
 
-    if not id:
+    if not sound_id:
         raise HTTPException(status_code=400, detail="Sound effect ID is required")
 
     metadata = {
-        "id": id,
-        "name": name or Path(file.filename).stem,
+        "id": sound_id,
+        "name": name or Path(file.filename or "").stem,
         "category": category,
         "volume": volume,
         "fade_in": fade_in,
@@ -1027,10 +1292,10 @@ async def list_sound_effects():
 
 @app.post("/api/sounds/background")
 async def upload_background_audio(
-    file: UploadFile = File(..., alias="audio_file"),
+    file: UploadFile = File(..., alias="audio_file"),  # noqa: B008
     name: str = Form(""),
-    id: str = Form(""),
-    type: str = Form("ambient"),
+    sound_id: str = Form(""),
+    sound_type: str = Form("ambient"),
     volume: float = Form(0.3),
     fade_in: float = Form(1.0),
     fade_out: float = Form(1.0),
@@ -1058,13 +1323,13 @@ async def upload_background_audio(
     """
     validate_audio_file(file)
 
-    if not id:
+    if not sound_id:
         raise HTTPException(status_code=400, detail="Background audio ID is required")
 
     metadata = {
-        "id": id,
+        "id": sound_id,
         "name": name or Path(file.filename).stem,
-        "type": type,
+        "type": sound_type,
         "volume": volume,
         "fade_in": fade_in,
         "fade_out": fade_out,
@@ -1231,7 +1496,7 @@ async def update_sound_effect(
 async def update_background_audio(
     sound_id: str,
     name: str = Form(None),
-    type: str = Form(None),
+    sound_type: str = Form(None),
     volume: float = Form(None),
     fade_in: float = Form(None),
     fade_out: float = Form(None),
@@ -1261,7 +1526,7 @@ async def update_background_audio(
         k: v
         for k, v in {
             "name": name,
-            "type": type,
+            "type": sound_type,
             "volume": volume,
             "fade_in": fade_in,
             "fade_out": fade_out,

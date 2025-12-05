@@ -128,14 +128,12 @@ python -m talk2me_ui
 3. **Open the UI** in your browser at `http://localhost:3000`
 
 4. **Create your first voice clone**:
-
    - Navigate to Voice Management
    - Click "Create New Voice"
    - Upload 3-5 audio samples of the target voice
    - Name your voice and save
 
 5. **Generate speech**:
-
    - Go to Text-to-Speech
    - Enter your text
    - Select your cloned voice

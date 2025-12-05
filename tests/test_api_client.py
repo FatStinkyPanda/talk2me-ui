@@ -54,7 +54,7 @@ class TestTalk2MeAPIClient:
         with patch.object(client.session, "request") as mock_request:
             mock_request.return_value = mock_response
 
-            response = client._make_request(
+            client._make_request(
                 "POST", "/test", json={"data": "test"}, headers={"X-Test": "value"}
             )
 
