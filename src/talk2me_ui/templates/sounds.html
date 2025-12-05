@@ -1,0 +1,854 @@
+{% extends "base.html" %}
+
+{% block title %}Sound Library - Talk2Me UI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Sound Library</h1>
+    <p class="page-description">Manage sound effects and background audio for your audiobooks and voice projects.</p>
+</div>
+
+<!-- Library Navigation -->
+<div class="library-tabs">
+    <button class="tab-btn active" onclick="switchTab('effects')">Sound Effects</button>
+    <button class="tab-btn" onclick="switchTab('background')">Background Audio</button>
+</div>
+
+<!-- Sound Effects Tab -->
+<div id="effects-tab" class="tab-content active">
+    <div class="grid grid-2">
+        <!-- Add Sound Effect Card -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Add Sound Effect</h3>
+                <p class="card-description">Upload audio files for use as sound effects</p>
+            </div>
+            <div class="card-content">
+                <form id="add-sfx-form" data-action="/api/sounds/effects">
+                    <div class="form-group">
+                        <label for="sfx-name" class="form-label">Effect Name *</label>
+                        <input type="text" id="sfx-name" name="name" class="form-input" required
+                            placeholder="e.g., Door Creak">
+                        <div class="form-help">Display name for the sound effect</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sfx-id" class="form-label">Effect ID *</label>
+                        <input type="text" id="sfx-id" name="id" class="form-input" required pattern="[a-zA-Z0-9_]+"
+                            placeholder="e.g., door_creak">
+                        <div class="form-help">Unique identifier used in {{{sfx:id}}} markup</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sfx-category" class="form-label">Category</label>
+                        <select id="sfx-category" name="category" class="form-select">
+                            <option value="">Select category...</option>
+                            <option value="ambient">Ambient</option>
+                            <option value="action">Action</option>
+                            <option value="nature">Nature</option>
+                            <option value="mechanical">Mechanical</option>
+                            <option value="human">Human</option>
+                            <option value="musical">Musical</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Audio File *</label>
+                        <div class="file-upload">
+                            <div class="file-upload-icon">🔊</div>
+                            <div class="file-upload-text">Choose audio file or drag it here</div>
+                            <div class="file-upload-hint">WAV, MP3, OGG, FLAC supported</div>
+                            <input type="file" name="audio_file" class="file-input" accept="audio/*" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="sfx-volume" class="form-label">Default Volume</label>
+                            <input type="range" id="sfx-volume" name="volume" class="form-input" min="0" max="1"
+                                step="0.1" value="0.8">
+                            <div class="form-help">Default playback volume (0.0 - 1.0)</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="sfx-fade-in" class="form-label">Fade In (seconds)</label>
+                            <input type="number" id="sfx-fade-in" name="fade_in" class="form-input" min="0" max="10"
+                                step="0.1" value="0.0">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="sfx-fade-out" class="form-label">Fade Out (seconds)</label>
+                            <input type="number" id="sfx-fade-out" name="fade_out" class="form-input" min="0" max="10"
+                                step="0.1" value="0.0">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="sfx-duration" class="form-label">Max Duration (seconds)</label>
+                            <input type="number" id="sfx-duration" name="duration" class="form-input" min="0"
+                                placeholder="Unlimited">
+                            <div class="form-help">Leave empty for full duration</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="sfx-pause-speech" name="pause_speech"> Pause speech during
+                            playback
+                        </label>
+                        <div class="form-help">Temporarily stop voice narration while effect plays</div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Add Sound Effect</button>
+                        <button type="button" class="btn btn-secondary" onclick="resetSFXForm()">Reset</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sound Effects Library -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Sound Effects Library</h3>
+                <p class="card-description">Browse and manage your sound effects</p>
+            </div>
+            <div class="card-content">
+                <div class="library-filters">
+                    <select id="sfx-category-filter" class="form-select">
+                        <option value="">All Categories</option>
+                        <option value="ambient">Ambient</option>
+                        <option value="action">Action</option>
+                        <option value="nature">Nature</option>
+                        <option value="mechanical">Mechanical</option>
+                        <option value="human">Human</option>
+                        <option value="musical">Musical</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <input type="text" id="sfx-search" class="form-input" placeholder="Search effects...">
+                </div>
+
+                <div class="sound-effects-grid" id="sound-effects-grid">
+                    <div class="empty-state">
+                        <div class="empty-icon">🔊</div>
+                        <div class="empty-title">No sound effects yet</div>
+                        <div class="empty-description">Add your first sound effect using the form</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Background Audio Tab -->
+<div id="background-tab" class="tab-content">
+    <div class="grid grid-2">
+        <!-- Add Background Audio Card -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Add Background Audio</h3>
+                <p class="card-description">Upload background music or ambient audio</p>
+            </div>
+            <div class="card-content">
+                <form id="add-bg-form" data-action="/api/sounds/background">
+                    <div class="form-group">
+                        <label for="bg-name" class="form-label">Audio Name *</label>
+                        <input type="text" id="bg-name" name="name" class="form-input" required
+                            placeholder="e.g., Forest Ambience">
+                        <div class="form-help">Display name for the background audio</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bg-id" class="form-label">Audio ID *</label>
+                        <input type="text" id="bg-id" name="id" class="form-input" required pattern="[a-zA-Z0-9_]+"
+                            placeholder="e.g., forest_ambient">
+                        <div class="form-help">Unique identifier used in {{{bg:id}}} markup</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bg-type" class="form-label">Type</label>
+                        <select id="bg-type" name="type" class="form-select">
+                            <option value="ambient">Ambient</option>
+                            <option value="music">Music</option>
+                            <option value="atmosphere">Atmosphere</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Audio File *</label>
+                        <div class="file-upload">
+                            <div class="file-upload-icon">🎵</div>
+                            <div class="file-upload-text">Choose audio file or drag it here</div>
+                            <div class="file-upload-hint">WAV, MP3, OGG, FLAC supported</div>
+                            <input type="file" name="audio_file" class="file-input" accept="audio/*" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="bg-volume" class="form-label">Default Volume</label>
+                            <input type="range" id="bg-volume" name="volume" class="form-input" min="0" max="1"
+                                step="0.1" value="0.3">
+                            <div class="form-help">Default playback volume (0.0 - 1.0)</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bg-fade-in" class="form-label">Fade In (seconds)</label>
+                            <input type="number" id="bg-fade-in" name="fade_in" class="form-input" min="0" max="10"
+                                step="0.1" value="1.0">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="bg-fade-out" class="form-label">Fade Out (seconds)</label>
+                            <input type="number" id="bg-fade-out" name="fade_out" class="form-input" min="0" max="10"
+                                step="0.1" value="1.0">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bg-duck-level" class="form-label">Duck Level</label>
+                            <input type="range" id="bg-duck-level" name="duck_level" class="form-input" min="0" max="1"
+                                step="0.1" value="0.2">
+                            <div class="form-help">Volume level when ducking speech (0.0 - 1.0)</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="bg-loop" name="loop" checked> Loop audio
+                        </label>
+                        <div class="form-help">Restart audio when it reaches the end</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="bg-duck-speech" name="duck_speech" checked> Duck speech during
+                            playback
+                        </label>
+                        <div class="form-help">Lower volume during voice narration</div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Add Background Audio</button>
+                        <button type="button" class="btn btn-secondary" onclick="resetBGForm()">Reset</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Background Audio Library -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Background Audio Library</h3>
+                <p class="card-description">Browse and manage your background audio</p>
+            </div>
+            <div class="card-content">
+                <div class="library-filters">
+                    <select id="bg-type-filter" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="ambient">Ambient</option>
+                        <option value="music">Music</option>
+                        <option value="atmosphere">Atmosphere</option>
+                    </select>
+                    <input type="text" id="bg-search" class="form-input" placeholder="Search audio...">
+                </div>
+
+                <div class="background-audio-grid" id="background-audio-grid">
+                    <div class="empty-state">
+                        <div class="empty-icon">🎵</div>
+                        <div class="empty-title">No background audio yet</div>
+                        <div class="empty-description">Add your first background track using the form</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let currentTab = 'effects';
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Load sound libraries
+        loadSoundEffects();
+        loadBackgroundAudio();
+
+        // Initialize form handlers
+        initializeSFXForm();
+        initializeBGForm();
+
+        // Initialize filters
+        initializeFilters();
+    });
+
+    function switchTab(tab) {
+        // Update tab buttons
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+
+        // Update tab content
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById(`${tab}-tab`).classList.add('active');
+
+        currentTab = tab;
+    }
+
+    function initializeSFXForm() {
+        const form = document.getElementById('add-sfx-form');
+        const uploadArea = form.querySelector('.file-upload');
+
+        form.addEventListener('submit', handleSFXUpload);
+        initializeDragAndDrop(uploadArea, 'sfx-file-input');
+    }
+
+    function initializeBGForm() {
+        const form = document.getElementById('add-bg-form');
+        const uploadArea = form.querySelector('.file-upload');
+
+        form.addEventListener('submit', handleBGUpload);
+        initializeDragAndDrop(uploadArea, 'bg-file-input');
+    }
+
+    function initializeDragAndDrop(uploadArea, inputId) {
+        const fileInput = uploadArea.querySelector('.file-input');
+
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        // Highlight drop area when item is dragged over it
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        // Handle dropped files
+        uploadArea.addEventListener('drop', handleDrop, false);
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function highlight(e) {
+            uploadArea.classList.add('drag-over');
+        }
+
+        function unhighlight(e) {
+            uploadArea.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+
+            if (files.length > 0) {
+                fileInput.files = files;
+                // Update display
+                const fileName = files[0].name;
+                const textElement = uploadArea.querySelector('.file-upload-text');
+                textElement.textContent = `Selected: ${fileName}`;
+            }
+        }
+    }
+
+    function initializeFilters() {
+        // SFX filters
+        document.getElementById('sfx-category-filter').addEventListener('change', filterSoundEffects);
+        document.getElementById('sfx-search').addEventListener('input', filterSoundEffects);
+
+        // BG filters
+        document.getElementById('bg-type-filter').addEventListener('change', filterBackgroundAudio);
+        document.getElementById('bg-search').addEventListener('input', filterBackgroundAudio);
+    }
+
+    async function handleSFXUpload(event) {
+        event.preventDefault();
+
+        const form = event.target;
+        const formData = new FormData(form);
+
+        showProgressModal('Uploading sound effect...');
+
+        try {
+            const response = await fetch('/api/sounds/effects', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Upload failed');
+            }
+
+            const result = await response.json();
+            showSuccess('Sound effect added successfully!');
+
+            form.reset();
+            loadSoundEffects();
+
+        } catch (error) {
+            showError('Upload failed: ' + error.message);
+        } finally {
+            closeProgressModal();
+        }
+    }
+
+    async function handleBGUpload(event) {
+        event.preventDefault();
+
+        const form = event.target;
+        const formData = new FormData(form);
+
+        showProgressModal('Uploading background audio...');
+
+        try {
+            const response = await fetch('/api/sounds/background', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Upload failed');
+            }
+
+            const result = await response.json();
+            showSuccess('Background audio added successfully!');
+
+            form.reset();
+            loadBackgroundAudio();
+
+        } catch (error) {
+            showError('Upload failed: ' + error.message);
+        } finally {
+            closeProgressModal();
+        }
+    }
+
+    async function loadSoundEffects() {
+        try {
+            const response = await fetch('/api/sounds/effects');
+            if (!response.ok) throw new Error('Failed to load sound effects');
+
+            const effects = await response.json();
+            renderSoundEffects(effects);
+
+        } catch (error) {
+            console.error('Failed to load sound effects:', error);
+            showError('Failed to load sound effects');
+        }
+    }
+
+    async function loadBackgroundAudio() {
+        try {
+            const response = await fetch('/api/sounds/background');
+            if (!response.ok) throw new Error('Failed to load background audio');
+
+            const audio = await response.json();
+            renderBackgroundAudio(audio);
+
+        } catch (error) {
+            console.error('Failed to load background audio:', error);
+            showError('Failed to load background audio');
+        }
+    }
+
+    function renderSoundEffects(effects) {
+        const container = document.getElementById('sound-effects-grid');
+
+        if (effects.length === 0) {
+            container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">🔊</div>
+                <div class="empty-title">No sound effects yet</div>
+                <div class="empty-description">Add your first sound effect using the form</div>
+            </div>
+        `;
+            return;
+        }
+
+        container.innerHTML = effects.map(effect => `
+        <div class="sound-item">
+            <div class="sound-header">
+                <div class="sound-name">${escapeHtml(effect.name)}</div>
+                <div class="sound-id">{{{sfx:${effect.id}}}</div>
+            </div>
+            <div class="sound-meta">
+                <span class="badge badge-info">${effect.category || 'Uncategorized'}</span>
+                <span class="sound-volume">Vol: ${effect.volume || 0.8}</span>
+            </div>
+            <div class="sound-controls">
+                <button class="btn btn-sm btn-outline" onclick="previewSound('${effect.id}', 'sfx')">
+                    <span>▶️</span> Preview
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="editSound('${effect.id}', 'sfx')">
+                    Edit
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteSound('${effect.id}', 'sfx')">
+                    Delete
+                </button>
+            </div>
+        </div>
+    `).join('');
+    }
+
+    function renderBackgroundAudio(audioList) {
+        const container = document.getElementById('background-audio-grid');
+
+        if (audioList.length === 0) {
+            container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">🎵</div>
+                <div class="empty-title">No background audio yet</div>
+                <div class="empty-description">Add your first background track using the form</div>
+            </div>
+        `;
+            return;
+        }
+
+        container.innerHTML = audioList.map(audio => `
+        <div class="sound-item">
+            <div class="sound-header">
+                <div class="sound-name">${escapeHtml(audio.name)}</div>
+                <div class="sound-id">{{{bg:${audio.id}}}</div>
+            </div>
+            <div class="sound-meta">
+                <span class="badge badge-success">${audio.type || 'Ambient'}</span>
+                <span class="sound-volume">Vol: ${audio.volume || 0.3}</span>
+                ${audio.loop ? '<span class="badge badge-warning">Loop</span>' : ''}
+            </div>
+            <div class="sound-controls">
+                <button class="btn btn-sm btn-outline" onclick="previewSound('${audio.id}', 'bg')">
+                    <span>▶️</span> Preview
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="editSound('${audio.id}', 'bg')">
+                    Edit
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteSound('${audio.id}', 'bg')">
+                    Delete
+                </button>
+            </div>
+        </div>
+    `).join('');
+    }
+
+    function filterSoundEffects() {
+        const categoryFilter = document.getElementById('sfx-category-filter').value.toLowerCase();
+        const searchFilter = document.getElementById('sfx-search').value.toLowerCase();
+
+        const items = document.querySelectorAll('#sound-effects-grid .sound-item');
+
+        items.forEach(item => {
+            const name = item.querySelector('.sound-name').textContent.toLowerCase();
+            const category = item.querySelector('.badge').textContent.toLowerCase();
+
+            const matchesCategory = !categoryFilter || category.includes(categoryFilter);
+            const matchesSearch = !searchFilter || name.includes(searchFilter);
+
+            item.style.display = matchesCategory && matchesSearch ? 'block' : 'none';
+        });
+    }
+
+    function filterBackgroundAudio() {
+        const typeFilter = document.getElementById('bg-type-filter').value.toLowerCase();
+        const searchFilter = document.getElementById('bg-search').value.toLowerCase();
+
+        const items = document.querySelectorAll('#background-audio-grid .sound-item');
+
+        items.forEach(item => {
+            const name = item.querySelector('.sound-name').textContent.toLowerCase();
+            const type = item.querySelector('.badge').textContent.toLowerCase();
+
+            const matchesType = !typeFilter || type.includes(typeFilter);
+            const matchesSearch = !searchFilter || name.includes(searchFilter);
+
+            item.style.display = matchesType && matchesSearch ? 'block' : 'none';
+        });
+    }
+
+    function previewSound(id, type) {
+        // Create audio element for preview
+        const audio = new Audio(`/api/sounds/${type}/${id}/audio`);
+        audio.volume = 0.5; // Preview at half volume
+
+        // Create modal for audio controls
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Preview: ${id}</h3>
+                    <button class="modal-close" onclick="closePreview()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <audio controls style="width: 100%;">
+                        <source src="/api/sounds/${type}/${id}/audio" type="audio/mpeg">
+                        Your browser does not support audio playback.
+                    </audio>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        modal.style.display = 'block';
+
+        // Close modal when clicking outside
+        modal.onclick = function (event) {
+            if (event.target === modal) {
+                closePreview();
+            }
+        };
+    }
+
+    function closePreview() {
+        const modal = document.querySelector('.modal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    async function editSound(id, type) {
+        try {
+            // Fetch current metadata
+            const response = await fetch(`/api/sounds/${type}/${id}`);
+            if (!response.ok) throw new Error('Failed to load sound data');
+
+            const sound = await response.json();
+
+            // Create edit modal
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = createEditForm(sound, type);
+
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
+
+            // Add form submit handler
+            const form = modal.querySelector('#edit-sound-form');
+            form.addEventListener('submit', handleEditSubmit);
+
+            // Close modal when clicking outside
+            modal.onclick = function (event) {
+                if (event.target === modal) {
+                    closeEditModal();
+                }
+            };
+
+        } catch (error) {
+            showError('Failed to load sound data: ' + error.message);
+        }
+    }
+
+    function createEditForm(sound, type) {
+        const isSFX = type === 'effects';
+
+        return `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Edit ${isSFX ? 'Sound Effect' : 'Background Audio'}: ${sound.name}</h3>
+                    <button class="modal-close" onclick="closeEditModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-sound-form" data-sound-id="${sound.id}" data-type="${type}">
+                        <div class="form-group">
+                            <label class="form-label">Name *</label>
+                            <input type="text" name="name" class="form-input" value="${escapeHtml(sound.name)}" required>
+                        </div>
+
+                        ${isSFX ? `
+                        <div class="form-group">
+                            <label class="form-label">Category</label>
+                            <select name="category" class="form-select">
+                                <option value="">Select category...</option>
+                                <option value="ambient" ${sound.category === 'ambient' ? 'selected' : ''}>Ambient</option>
+                                <option value="action" ${sound.category === 'action' ? 'selected' : ''}>Action</option>
+                                <option value="nature" ${sound.category === 'nature' ? 'selected' : ''}>Nature</option>
+                                <option value="mechanical" ${sound.category === 'mechanical' ? 'selected' : ''}>Mechanical</option>
+                                <option value="human" ${sound.category === 'human' ? 'selected' : ''}>Human</option>
+                                <option value="musical" ${sound.category === 'musical' ? 'selected' : ''}>Musical</option>
+                                <option value="other" ${sound.category === 'other' ? 'selected' : ''}>Other</option>
+                            </select>
+                        </div>
+                        ` : `
+                        <div class="form-group">
+                            <label class="form-label">Type</label>
+                            <select name="type" class="form-select">
+                                <option value="ambient" ${sound.type === 'ambient' ? 'selected' : ''}>Ambient</option>
+                                <option value="music" ${sound.type === 'music' ? 'selected' : ''}>Music</option>
+                                <option value="atmosphere" ${sound.type === 'atmosphere' ? 'selected' : ''}>Atmosphere</option>
+                            </select>
+                        </div>
+                        `}
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Volume (${isSFX ? '0.0-1.0' : '0.0-1.0'})</label>
+                                <input type="range" name="volume" class="form-input" min="0" max="1" step="0.1"
+                                       value="${sound.volume || (isSFX ? 0.8 : 0.3)}">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Fade In (seconds)</label>
+                                <input type="number" name="fade_in" class="form-input" min="0" max="10" step="0.1"
+                                       value="${sound.fade_in || (isSFX ? 0.0 : 1.0)}">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Fade Out (seconds)</label>
+                                <input type="number" name="fade_out" class="form-input" min="0" max="10" step="0.1"
+                                       value="${sound.fade_out || (isSFX ? 0.0 : 1.0)}">
+                            </div>
+
+                            ${isSFX ? `
+                            <div class="form-group">
+                                <label class="form-label">Max Duration (seconds)</label>
+                                <input type="number" name="duration" class="form-input" min="0"
+                                       value="${sound.duration || ''}" placeholder="Unlimited">
+                            </div>
+                            ` : `
+                            <div class="form-group">
+                                <label class="form-label">Duck Level</label>
+                                <input type="range" name="duck_level" class="form-input" min="0" max="1" step="0.1"
+                                       value="${sound.duck_level || 0.2}">
+                            </div>
+                            `}
+                        </div>
+
+                        ${isSFX ? `
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" name="pause_speech" ${sound.pause_speech ? 'checked' : ''}>
+                                Pause speech during playback
+                            </label>
+                        </div>
+                        ` : `
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" name="loop" ${sound.loop ? 'checked' : ''}>
+                                Loop audio
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" name="duck_speech" ${sound.duck_speech ? 'checked' : ''}>
+                                Duck speech during playback
+                            </label>
+                        </div>
+                        `}
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+    }
+
+    async function handleEditSubmit(event) {
+        event.preventDefault();
+
+        const form = event.target;
+        const formData = new FormData(form);
+        const soundId = form.dataset.soundId;
+        const type = form.dataset.type;
+
+        showProgressModal('Updating sound...');
+
+        try {
+            const response = await fetch(`/api/sounds/${type}/${soundId}`, {
+                method: 'PUT',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Update failed');
+            }
+
+            const updatedSound = await response.json();
+            showSuccess('Sound updated successfully!');
+
+            closeEditModal();
+
+            // Refresh the library
+            if (type === 'effects') {
+                loadSoundEffects();
+            } else {
+                loadBackgroundAudio();
+            }
+
+        } catch (error) {
+            showError('Update failed: ' + error.message);
+        } finally {
+            closeProgressModal();
+        }
+    }
+
+    function closeEditModal() {
+        const modal = document.querySelector('.modal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    async function deleteSound(id, type) {
+        if (!confirm(`Are you sure you want to delete this ${type}?`)) {
+            return;
+        }
+
+        try {
+            showProgressModal('Deleting sound...');
+
+            const endpoint = type === 'sfx' ? '/api/sounds/effects' : '/api/sounds/background';
+            const response = await fetch(`${endpoint}/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) throw new Error('Delete failed');
+
+            showSuccess('Sound deleted successfully');
+
+            if (type === 'sfx') {
+                loadSoundEffects();
+            } else {
+                loadBackgroundAudio();
+            }
+
+        } catch (error) {
+            showError('Delete failed: ' + error.message);
+        } finally {
+            closeProgressModal();
+        }
+    }
+
+    function resetSFXForm() {
+        document.getElementById('add-sfx-form').reset();
+    }
+
+    function resetBGForm() {
+        document.getElementById('add-bg-form').reset();
+    }
+
+    // Utility function for HTML escaping
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}

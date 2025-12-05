@@ -112,12 +112,14 @@ python -m talk2me_ui
 ## Quick Start
 
 1. **Start the Talk2Me backend server**:
+
    ```bash
    cd /path/to/talk2me
    talk2me --api-only --port 8000
    ```
 
 2. **Launch Talk2Me UI**:
+
    ```bash
    cd /path/to/talk2me-ui
    python -m talk2me_ui
@@ -126,34 +128,230 @@ python -m talk2me_ui
 3. **Open the UI** in your browser at `http://localhost:3000`
 
 4. **Create your first voice clone**:
+
    - Navigate to Voice Management
    - Click "Create New Voice"
    - Upload 3-5 audio samples of the target voice
    - Name your voice and save
 
 5. **Generate speech**:
+
    - Go to Text-to-Speech
    - Enter your text
    - Select your cloned voice
    - Click "Generate"
 
+## Deployment
+
+Talk2Me UI supports multiple deployment methods for different environments.
+
+### Development Deployment
+
+#### Using Setup Script (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/FatStinkyPanda/talk2me-ui.git
+cd talk2me-ui
+
+# Run the automated setup
+./scripts/setup.sh
+
+# Start development server
+./scripts/run_dev.sh
+```
+
+The setup script will:
+
+- Check Python version compatibility
+- Create a virtual environment
+- Install all dependencies
+- Set up necessary directories
+- Copy default configuration
+
+#### Manual Setup
+
+```bash
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Copy configuration
+cp config/example.yaml config/user.yaml
+
+# Start server
+uvicorn src.talk2me_ui.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Production Deployment
+
+#### Using Production Script
+
+```bash
+# After setup, run production server
+./scripts/run_prod.sh
+```
+
+The production script includes:
+
+- Optimized uvicorn settings with multiple workers
+- Environment variable loading from `.env.prod`
+- Pre-flight checks
+- Proper logging configuration
+
+#### Using Docker (Recommended for Production)
+
+```bash
+# Build and run with Docker Compose
+docker-compose up -d
+
+# Or with nginx reverse proxy
+docker-compose --profile with-nginx up -d
+```
+
+#### Environment Configuration
+
+Create environment-specific configuration files:
+
+**Development (.env.dev)**:
+
+```bash
+APP_ENV=development
+LOG_LEVEL=DEBUG
+HOST=0.0.0.0
+PORT=8000
+WORKERS=1
+```
+
+**Production (.env.prod)**:
+
+```bash
+APP_ENV=production
+LOG_LEVEL=INFO
+HOST=0.0.0.0
+PORT=8000
+WORKERS=4
+SECRET_KEY=your-secure-secret-key
+ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
+```
+
+### Docker Deployment
+
+#### Basic Docker Setup
+
+```bash
+# Build the image
+docker build -t talk2me-ui .
+
+# Run the container
+docker run -d \
+  --name talk2me-ui \
+  -p 8000:8000 \
+  -v ./data:/app/data \
+  -v ./config:/app/config:ro \
+  --env-file .env.prod \
+  talk2me-ui
+```
+
+#### Docker Compose (Recommended)
+
+```yaml
+# docker-compose.yml
+version: "3.8"
+services:
+  talk2me-ui:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env.prod
+    restart: unless-stopped
+```
+
+#### With Nginx Reverse Proxy
+
+```bash
+# Enable nginx profile
+docker-compose --profile with-nginx up -d
+```
+
+This provides:
+
+- Static file serving optimization
+- Gzip compression
+- Security headers
+- WebSocket proxy support
+
+### Health Checks and Monitoring
+
+#### Health Check Endpoint
+
+The application provides a health check endpoint:
+
+```bash
+curl http://localhost:8000/api/health
+```
+
+Response:
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-12-05T14:30:00Z",
+  "version": "1.0.0",
+  "service": "talk2me-ui"
+}
+```
+
+#### Docker Health Checks
+
+The Docker container includes automatic health checks that monitor the `/api/health` endpoint.
+
+#### Monitoring Setup
+
+For production monitoring, consider:
+
+1. **Application Metrics**: Enable metrics collection
+2. **Log Aggregation**: Centralize logs with ELK stack or similar
+3. **Container Monitoring**: Use Prometheus + Grafana
+4. **Load Balancing**: Distribute traffic across multiple instances
+
+### Deployment Checklist
+
+- [ ] Environment variables configured
+- [ ] SSL certificates installed (for HTTPS)
+- [ ] Firewall configured
+- [ ] Monitoring and alerting set up
+- [ ] Backup strategy implemented
+- [ ] Domain name configured
+- [ ] Load balancer configured (if needed)
+
 ## User Interface Overview
 
 ### Main Navigation
 
-| Section | Description |
-|---------|-------------|
-| **Dashboard** | System status, quick actions, recent activity |
-| **Voice Management** | Create, edit, delete voice profiles |
-| **Speech-to-Text** | Audio transcription interface |
-| **Text-to-Speech** | Single text-to-speech generation |
-| **Audiobook Studio** | Multi-voice audiobook generation |
-| **Sound Library** | Manage sound effects and background audio |
-| **Settings** | Global configuration and preferences |
+| Section              | Description                                   |
+| -------------------- | --------------------------------------------- |
+| **Dashboard**        | System status, quick actions, recent activity |
+| **Voice Management** | Create, edit, delete voice profiles           |
+| **Speech-to-Text**   | Audio transcription interface                 |
+| **Text-to-Speech**   | Single text-to-speech generation              |
+| **Audiobook Studio** | Multi-voice audiobook generation              |
+| **Sound Library**    | Manage sound effects and background audio     |
+| **Settings**         | Global configuration and preferences          |
 
 ### Dashboard
 
 The dashboard provides:
+
 - Talk2Me backend connection status
 - Available voices count
 - Recent generations history
@@ -180,14 +378,14 @@ The dashboard provides:
 
 ### Voice Sample Guidelines
 
-| Aspect | Recommendation |
-|--------|----------------|
-| **Format** | WAV, PCM 16-bit mono |
-| **Sample Rate** | 16000 Hz or 24000 Hz |
-| **Duration** | 5-30 seconds per sample |
-| **Content** | Varied sentences, natural speech |
-| **Quality** | Minimal background noise |
-| **Quantity** | 5-10 samples for optimal cloning |
+| Aspect          | Recommendation                   |
+| --------------- | -------------------------------- |
+| **Format**      | WAV, PCM 16-bit mono             |
+| **Sample Rate** | 16000 Hz or 24000 Hz             |
+| **Duration**    | 5-30 seconds per sample          |
+| **Content**     | Varied sentences, natural speech |
+| **Quality**     | Minimal background noise         |
+| **Quantity**    | 5-10 samples for optimal cloning |
 
 ### Managing Voices
 
@@ -287,13 +485,13 @@ Thunder rumbled in the distance as rain began to fall.
 
 ### Project Settings
 
-| Setting | Description |
-|---------|-------------|
-| **Output Format** | WAV, MP3, or FLAC |
-| **Sample Rate** | 22050, 24000, or 44100 Hz |
-| **Bit Depth** | 16-bit or 24-bit |
-| **Normalization** | Enable audio level normalization |
-| **Chapter Markers** | Generate chapter metadata |
+| Setting             | Description                      |
+| ------------------- | -------------------------------- |
+| **Output Format**   | WAV, MP3, or FLAC                |
+| **Sample Rate**     | 22050, 24000, or 44100 Hz        |
+| **Bit Depth**       | 16-bit or 24-bit                 |
+| **Normalization**   | Enable audio level normalization |
+| **Chapter Markers** | Generate chapter metadata        |
 
 ## Sound Effects System
 
@@ -311,17 +509,17 @@ Thunder rumbled in the distance as rain began to fall.
 
 ### Sound Effect Properties
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `id` | string | Unique identifier used in triple braces |
-| `name` | string | Human-readable display name |
-| `category` | string | Organization category |
-| `volume` | float | Default volume (0.0-1.0) |
-| `fade_in` | float | Fade-in duration in seconds |
-| `fade_out` | float | Fade-out duration in seconds |
-| `start_at` | float | Start playback at timestamp (seconds) |
-| `end_at` | float | End playback at timestamp (seconds) |
-| `duration` | float | Maximum playback duration |
+| Property   | Type   | Description                             |
+| ---------- | ------ | --------------------------------------- |
+| `id`       | string | Unique identifier used in triple braces |
+| `name`     | string | Human-readable display name             |
+| `category` | string | Organization category                   |
+| `volume`   | float  | Default volume (0.0-1.0)                |
+| `fade_in`  | float  | Fade-in duration in seconds             |
+| `fade_out` | float  | Fade-out duration in seconds            |
+| `start_at` | float  | Start playback at timestamp (seconds)   |
+| `end_at`   | float  | End playback at timestamp (seconds)     |
+| `duration` | float  | Maximum playback duration               |
 
 ### Using Sound Effects in Text
 
@@ -350,17 +548,17 @@ The sound of approaching footsteps grew louder.
 
 ### Background Audio Properties
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `id` | string | Unique identifier used in triple braces |
-| `name` | string | Human-readable display name |
-| `type` | string | music, ambient, or atmosphere |
-| `volume` | float | Default volume (0.0-1.0) |
-| `loop` | boolean | Loop audio when end is reached |
-| `fade_in` | float | Fade-in duration in seconds |
-| `fade_out` | float | Fade-out duration in seconds |
-| `duck_speech` | boolean | Lower volume during speech |
-| `duck_level` | float | Volume level during ducking (0.0-1.0) |
+| Property      | Type    | Description                             |
+| ------------- | ------- | --------------------------------------- |
+| `id`          | string  | Unique identifier used in triple braces |
+| `name`        | string  | Human-readable display name             |
+| `type`        | string  | music, ambient, or atmosphere           |
+| `volume`      | float   | Default volume (0.0-1.0)                |
+| `loop`        | boolean | Loop audio when end is reached          |
+| `fade_in`     | float   | Fade-in duration in seconds             |
+| `fade_out`    | float   | Fade-out duration in seconds            |
+| `duck_speech` | boolean | Lower volume during speech              |
+| `duck_level`  | float   | Volume level during ducking (0.0-1.0)   |
 
 ### Using Background Audio in Text
 
@@ -428,28 +626,28 @@ Override global settings for individual elements using inline flags in triple br
 
 #### Sound Effects Flags
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `volume` | float | 0.8 | Playback volume (0.0-1.0) |
-| `fade_in` | float | 0.0 | Fade-in duration (seconds) |
-| `fade_out` | float | 0.0 | Fade-out duration (seconds) |
-| `start_at` | float | 0.0 | Start playback timestamp |
-| `end_at` | float | null | End playback timestamp |
-| `duration` | float | null | Maximum duration |
-| `pause_speech` | bool | false | Pause speech during playback |
+| Flag           | Type  | Default | Description                  |
+| -------------- | ----- | ------- | ---------------------------- |
+| `volume`       | float | 0.8     | Playback volume (0.0-1.0)    |
+| `fade_in`      | float | 0.0     | Fade-in duration (seconds)   |
+| `fade_out`     | float | 0.0     | Fade-out duration (seconds)  |
+| `start_at`     | float | 0.0     | Start playback timestamp     |
+| `end_at`       | float | null    | End playback timestamp       |
+| `duration`     | float | null    | Maximum duration             |
+| `pause_speech` | bool  | false   | Pause speech during playback |
 
 #### Background Audio Flags
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `volume` | float | 0.3 | Playback volume (0.0-1.0) |
-| `fade_in` | float | 1.0 | Fade-in duration (seconds) |
-| `fade_out` | float | 1.0 | Fade-out duration (seconds) |
-| `loop` | bool | true | Loop audio |
-| `duck_speech` | bool | true | Lower volume during speech |
-| `duck_level` | float | 0.2 | Volume level during ducking |
-| `start_at` | float | 0.0 | Start playback timestamp |
-| `end_at` | float | null | End playback timestamp |
+| Flag          | Type  | Default | Description                 |
+| ------------- | ----- | ------- | --------------------------- |
+| `volume`      | float | 0.3     | Playback volume (0.0-1.0)   |
+| `fade_in`     | float | 1.0     | Fade-in duration (seconds)  |
+| `fade_out`    | float | 1.0     | Fade-out duration (seconds) |
+| `loop`        | bool  | true    | Loop audio                  |
+| `duck_speech` | bool  | true    | Lower volume during speech  |
+| `duck_level`  | float | 0.2     | Volume level during ducking |
+| `start_at`    | float | 0.0     | Start playback timestamp    |
+| `end_at`      | float | null    | End playback timestamp      |
 
 ## Triple Brace Markup Reference
 
@@ -594,18 +792,18 @@ Talk2Me UI communicates with the Talk2Me backend via REST and WebSocket APIs.
 
 ### REST Endpoints Used
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/` | GET | Health check |
-| `/stt` | POST | Speech-to-text transcription |
-| `/tts` | POST | Text-to-speech synthesis |
-| `/voices` | GET | List available voices |
-| `/voices` | POST | Create new voice |
-| `/voices/{id}` | PUT | Update voice |
-| `/voices/{id}` | DELETE | Delete voice |
-| `/voices/{id}/samples` | POST | Upload voice samples |
-| `/voices/{id}/samples/{sample_id}` | DELETE | Delete voice sample |
-| `/voices/{id}/retrain` | POST | Retrain voice model |
+| Endpoint                           | Method | Purpose                      |
+| ---------------------------------- | ------ | ---------------------------- |
+| `/`                                | GET    | Health check                 |
+| `/stt`                             | POST   | Speech-to-text transcription |
+| `/tts`                             | POST   | Text-to-speech synthesis     |
+| `/voices`                          | GET    | List available voices        |
+| `/voices`                          | POST   | Create new voice             |
+| `/voices/{id}`                     | PUT    | Update voice                 |
+| `/voices/{id}`                     | DELETE | Delete voice                 |
+| `/voices/{id}/samples`             | POST   | Upload voice samples         |
+| `/voices/{id}/samples/{sample_id}` | DELETE | Delete voice sample          |
+| `/voices/{id}/retrain`             | POST   | Retrain voice model          |
 
 ### WebSocket Connection
 
@@ -639,6 +837,7 @@ Error: Could not connect to Talk2Me backend
 ```
 
 **Solution**:
+
 1. Verify Talk2Me backend is running: `curl http://localhost:8000/`
 2. Check backend host/port in configuration
 3. Ensure no firewall blocking the connection
@@ -650,6 +849,7 @@ Error: Failed to create voice - insufficient samples
 ```
 
 **Solution**:
+
 1. Upload at least 3 audio samples
 2. Ensure samples are in WAV format
 3. Check sample duration (5-30 seconds recommended)
@@ -662,6 +862,7 @@ Error: TTS generation timed out
 ```
 
 **Solution**:
+
 1. Reduce text length
 2. Increase timeout in configuration
 3. Check system resources (CPU/RAM usage)
@@ -674,6 +875,7 @@ Error: Sound effect 'effect_id' not found
 ```
 
 **Solution**:
+
 1. Verify the sound effect ID matches exactly
 2. Check sound effect exists in Sound Library
 3. Ensure audio file is valid and not corrupted
@@ -753,4 +955,4 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 
 **Talk2Me UI** is developed and maintained by **FatStinkyPanda** (Daniel A Bissey).
 
-*Last updated: December 2024*
+_Last updated: December 2024_

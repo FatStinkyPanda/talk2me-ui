@@ -43,6 +43,7 @@ Base URL: `http://localhost:8000`
 Root endpoint for health checking.
 
 **Response:**
+
 ```json
 {
   "message": "Talk2Me API is running"
@@ -54,6 +55,7 @@ Root endpoint for health checking.
 Convert speech audio to text.
 
 **Request:**
+
 - Method: `POST`
 - Content-Type: `multipart/form-data`
 - Body: `file` (UploadFile) - Audio file (WAV, PCM 16-bit mono)
@@ -61,6 +63,7 @@ Convert speech audio to text.
   - `sample_rate` (optional): int - Sample rate override (default: 16000)
 
 **Response:**
+
 ```json
 {
   "text": "transcribed text content"
@@ -68,6 +71,7 @@ Convert speech audio to text.
 ```
 
 **Status Codes:**
+
 - `200`: Success
 - `500`: STT engine not initialized or transcription failed
 
@@ -76,9 +80,11 @@ Convert speech audio to text.
 Convert text to speech audio.
 
 **Request:**
+
 - Method: `POST`
 - Content-Type: `application/json`
 - Body:
+
 ```json
 {
   "text": "Text to synthesize",
@@ -87,10 +93,12 @@ Convert text to speech audio.
 ```
 
 **Response:**
+
 - Content-Type: `audio/wav`
 - Body: PCM 16-bit mono audio data
 
 **Status Codes:**
+
 - `200`: Success
 - `400`: Invalid text or voice
 - `500`: TTS engine not initialized or synthesis failed
@@ -102,6 +110,7 @@ Convert text to speech audio.
 List all available voices.
 
 **Response:**
+
 ```json
 {
   "voices": [
@@ -119,6 +128,7 @@ List all available voices.
 Create a new voice profile.
 
 **Request:**
+
 - Method: `POST`
 - Content-Type: `multipart/form-data`
 - Form Data:
@@ -127,6 +137,7 @@ Create a new voice profile.
   - `samples`: list[UploadFile] - Audio sample files (WAV format)
 
 **Response:**
+
 ```json
 {
   "voice_id": "generated_voice_id",
@@ -140,10 +151,12 @@ Create a new voice profile.
 Update voice profile.
 
 **Request:**
+
 - Method: `PUT`
 - Path Parameters: `voice_id` (str)
 - Content-Type: `application/json`
 - Body:
+
 ```json
 {
   "name": "New Display Name",
@@ -152,6 +165,7 @@ Update voice profile.
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Voice updated successfully"
@@ -163,10 +177,12 @@ Update voice profile.
 Delete voice profile and samples.
 
 **Request:**
+
 - Method: `DELETE`
 - Path Parameters: `voice_id` (str)
 
 **Response:**
+
 ```json
 {
   "message": "Voice deleted successfully"
@@ -178,12 +194,14 @@ Delete voice profile and samples.
 Upload audio samples for voice.
 
 **Request:**
+
 - Method: `POST`
 - Path Parameters: `voice_id` (str)
 - Content-Type: `multipart/form-data`
 - Body: `samples` (list[UploadFile]) - WAV audio files
 
 **Response:**
+
 ```json
 {
   "uploaded": ["sample1.wav", "sample2.wav"],
@@ -196,12 +214,14 @@ Upload audio samples for voice.
 Remove specific sample from voice.
 
 **Request:**
+
 - Method: `DELETE`
 - Path Parameters:
   - `voice_id` (str)
   - `sample_id` (str) - Filename of sample to remove
 
 **Response:**
+
 ```json
 {
   "message": "Sample deleted successfully"
@@ -213,10 +233,12 @@ Remove specific sample from voice.
 Trigger voice retraining (validates samples).
 
 **Request:**
+
 - Method: `POST`
 - Path Parameters: `voice_id` (str)
 
 **Response:**
+
 ```json
 {
   "message": "Voice retrained successfully",
@@ -241,12 +263,14 @@ WebSocket endpoint for real-time conversation: `ws://localhost:8000/ws`
 #### Client → Server
 
 **Audio Data:**
+
 - Type: Binary
 - Data: PCM 16-bit mono audio chunks
 
 #### Server → Client
 
 **Transcription:**
+
 ```json
 {
   "type": "transcription",
@@ -255,6 +279,7 @@ WebSocket endpoint for real-time conversation: `ws://localhost:8000/ws`
 ```
 
 **Error:**
+
 ```json
 {
   "type": "error",
@@ -310,7 +335,7 @@ api:
     - "*"
 
 audio:
-  input_device: null  # null = system default
+  input_device: null # null = system default
   output_device: null # null = system default
   chunk_size: 1024
 ```
@@ -335,26 +360,31 @@ voices:
 ### Configuration Schema
 
 #### STT Configuration
+
 - `model_path`: Path to Vosk STT model directory
 - `wake_word_model_path`: Path to lightweight Vosk model for wake word detection
 - `sample_rate`: Audio sample rate (default: 16000)
 
 #### TTS Configuration
+
 - `model_path`: Path to XTTS v2 model directory
 - `default_voice`: Default voice identifier
 - `sample_rate`: Output audio sample rate (default: 24000)
 
 #### Wake Words Configuration
+
 - `activation`: List of phrases to activate listening
 - `start_listening`: Alternative activation phrases
 - `done_talking`: Phrases to stop listening
 
 #### API Configuration
+
 - `host`: Server bind address
 - `port`: Server port number
 - `cors_origins`: Allowed CORS origins
 
 #### Audio Configuration
+
 - `input_device`: Audio input device index (null for default)
 - `output_device`: Audio output device index (null for default)
 - `chunk_size`: Audio processing chunk size
@@ -397,6 +427,7 @@ talk2me --interactive
 ```
 
 Features:
+
 - Real-time wake word detection
 - Automatic speech transcription
 - Echo responses via TTS
@@ -607,22 +638,22 @@ async def process_audio(file: UploadFile):
 #### JavaScript Example
 
 ```javascript
-const ws = new WebSocket('ws://localhost:8000/ws');
+const ws = new WebSocket("ws://localhost:8000/ws");
 
 ws.onopen = () => {
-    console.log('Connected to Talk2Me');
+  console.log("Connected to Talk2Me");
 };
 
 ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    if (data.type === 'transcription') {
-        console.log('Transcribed:', data.text);
-    }
+  const data = JSON.parse(event.data);
+  if (data.type === "transcription") {
+    console.log("Transcribed:", data.text);
+  }
 };
 
 // Send audio chunks
 function sendAudioChunk(audioData) {
-    ws.send(audioData);
+  ws.send(audioData);
 }
 ```
 
@@ -665,13 +696,13 @@ function sendAudioChunk(audioData) {
 
 ```javascript
 ws.onerror = (error) => {
-    console.error('WebSocket error:', error);
+  console.error("WebSocket error:", error);
 };
 
 ws.onclose = (event) => {
-    if (event.code === 1011) {
-        console.error('Server error: engines not initialized');
-    }
+  if (event.code === 1011) {
+    console.error("Server error: engines not initialized");
+  }
 };
 ```
 
@@ -849,14 +880,17 @@ server {
 #### Common Issues
 
 1. **"Model not found"**
+
    - Run `python scripts/download_models.py`
    - Check `models/` directory permissions
 
 2. **"Audio device not found"**
+
    - Verify microphone/speaker connections
    - Check audio device permissions
 
 3. **"CUDA out of memory"**
+
    - Reduce TTS batch size
    - Use CPU mode if available
 

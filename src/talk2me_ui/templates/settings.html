@@ -1,0 +1,565 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Talk2Me UI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Settings</h1>
+    <p class="page-description">Configure global settings for Talk2Me UI and audio processing.</p>
+</div>
+
+<!-- Settings Tabs -->
+<div class="settings-tabs">
+    <button class="tab-btn active" onclick="switchSettingsTab('backend')">Backend Connection</button>
+    <button class="tab-btn" onclick="switchSettingsTab('audio')">Audio Configuration</button>
+    <button class="tab-btn" onclick="switchSettingsTab('storage')">Storage Paths</button>
+    <button class="tab-btn" onclick="switchSettingsTab('ui')">UI Preferences</button>
+</div>
+
+<!-- Backend Connection Tab -->
+<div id="backend-tab" class="tab-content active">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Backend Connection</h3>
+            <p class="card-description">Configure connection to the Talk2Me backend server</p>
+        </div>
+        <div class="card-content">
+            <form id="backend-settings-form" data-action="/api/settings/backend">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="backend-host" class="form-label">Host *</label>
+                        <input type="text" id="backend-host" name="host" class="form-input" required
+                            placeholder="localhost">
+                        <div class="form-help">Backend server hostname or IP address</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="backend-port" class="form-label">Port *</label>
+                        <input type="number" id="backend-port" name="port" class="form-input" required min="1"
+                            max="65535" placeholder="8000">
+                        <div class="form-help">Backend server port number</div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="backend-timeout" class="form-label">Timeout (seconds)</label>
+                        <input type="number" id="backend-timeout" name="timeout" class="form-input" min="1" max="300"
+                            value="30">
+                        <div class="form-help">Request timeout in seconds</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="backend-retries" class="form-label">Retry Attempts</label>
+                        <input type="number" id="backend-retries" name="retry_attempts" class="form-input" min="0"
+                            max="10" value="3">
+                        <div class="form-help">Number of retry attempts for failed requests</div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Backend Settings</button>
+                    <button type="button" class="btn btn-secondary" onclick="testConnection()">Test Connection</button>
+                    <button type="button" class="btn btn-outline" onclick="resetBackendSettings()">Reset to
+                        Defaults</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Audio Configuration Tab -->
+<div id="audio-tab" class="tab-content">
+    <div class="grid grid-2">
+        <!-- Voice Settings -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Voice Settings</h3>
+                <p class="card-description">Default settings for text-to-speech generation</p>
+            </div>
+            <div class="card-content">
+                <form id="voice-settings-form" data-action="/api/settings/audio/voice">
+                    <div class="form-group">
+                        <label for="voice-default-volume" class="form-label">Default Volume</label>
+                        <input type="range" id="voice-default-volume" name="default_volume" class="form-input" min="0"
+                            max="1" step="0.1" value="1.0">
+                        <div class="form-help">Default volume for voice playback (0.0 - 1.0)</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="voice-normalize" name="normalize" checked> Audio Normalization
+                        </label>
+                        <div class="form-help">Automatically balance audio levels</div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save Voice Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sound Effects Settings -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Sound Effects Settings</h3>
+                <p class="card-description">Default settings for sound effect playback</p>
+            </div>
+            <div class="card-content">
+                <form id="sfx-settings-form" data-action="/api/settings/audio/sound_effects">
+                    <div class="form-group">
+                        <label for="sfx-default-volume" class="form-label">Default Volume</label>
+                        <input type="range" id="sfx-default-volume" name="default_volume" class="form-input" min="0"
+                            max="1" step="0.1" value="0.8">
+                        <div class="form-help">Default volume for sound effects (0.0 - 1.0)</div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="sfx-fade-in" class="form-label">Default Fade In</label>
+                            <input type="number" id="sfx-fade-in" name="fade_in" class="form-input" min="0" max="10"
+                                step="0.1" value="0.0">
+                            <div class="form-help">Default fade-in duration (seconds)</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="sfx-fade-out" class="form-label">Default Fade Out</label>
+                            <input type="number" id="sfx-fade-out" name="fade_out" class="form-input" min="0" max="10"
+                                step="0.1" value="0.0">
+                            <div class="form-help">Default fade-out duration (seconds)</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="sfx-pause-speech" name="pause_speech" checked> Pause Speech by
+                            Default
+                        </label>
+                        <div class="form-help">Pause voice narration during sound effects</div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save SFX Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Background Audio Settings -->
+    <div class="card" style="margin-top: var(--spacing-xl);">
+        <div class="card-header">
+            <h3 class="card-title">Background Audio Settings</h3>
+            <p class="card-description">Default settings for background music and ambient audio</p>
+        </div>
+        <div class="card-content">
+            <form id="bg-settings-form" data-action="/api/settings/audio/background">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="bg-default-volume" class="form-label">Default Volume</label>
+                        <input type="range" id="bg-default-volume" name="default_volume" class="form-input" min="0"
+                            max="1" step="0.1" value="0.3">
+                        <div class="form-help">Default volume for background audio (0.0 - 1.0)</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bg-duck-level" class="form-label">Duck Level</label>
+                        <input type="range" id="bg-duck-level" name="duck_level" class="form-input" min="0" max="1"
+                            step="0.1" value="0.2">
+                        <div class="form-help">Volume level when ducking during speech (0.0 - 1.0)</div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="bg-fade-in" class="form-label">Default Fade In</label>
+                        <input type="number" id="bg-fade-in" name="fade_in" class="form-input" min="0" max="10"
+                            step="0.1" value="1.0">
+                        <div class="form-help">Default fade-in duration (seconds)</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bg-fade-out" class="form-label">Default Fade Out</label>
+                        <input type="number" id="bg-fade-out" name="fade_out" class="form-input" min="0" max="10"
+                            step="0.1" value="1.0">
+                        <div class="form-help">Default fade-out duration (seconds)</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="bg-duck-speech" name="duck_speech" checked> Duck Speech by Default
+                    </label>
+                    <div class="form-help">Lower background volume during voice narration</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="bg-loop" name="loop" checked> Loop Audio by Default
+                    </label>
+                    <div class="form-help">Restart background audio when it ends</div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Background Settings</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Storage Paths Tab -->
+<div id="storage-tab" class="tab-content">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Storage Configuration</h3>
+            <p class="card-description">Configure file storage paths for voices, audio, and projects</p>
+        </div>
+        <div class="card-content">
+            <form id="storage-settings-form" data-action="/api/settings/storage">
+                <div class="form-group">
+                    <label for="storage-voices" class="form-label">Voices Directory</label>
+                    <input type="text" id="storage-voices" name="voices" class="form-input" placeholder="./data/voices">
+                    <div class="form-help">Directory for storing voice profile data</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="storage-sfx" class="form-label">Sound Effects Directory</label>
+                    <input type="text" id="storage-sfx" name="sound_effects" class="form-input"
+                        placeholder="./data/sfx">
+                    <div class="form-help">Directory for storing sound effect files</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="storage-bg" class="form-label">Background Audio Directory</label>
+                    <input type="text" id="storage-bg" name="background_audio" class="form-input"
+                        placeholder="./data/background">
+                    <div class="form-help">Directory for storing background audio files</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="storage-projects" class="form-label">Projects Directory</label>
+                    <input type="text" id="storage-projects" name="projects" class="form-input"
+                        placeholder="./data/projects">
+                    <div class="form-help">Directory for storing audiobook projects</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="storage-exports" class="form-label">Exports Directory</label>
+                    <input type="text" id="storage-exports" name="exports" class="form-input"
+                        placeholder="./data/exports">
+                    <div class="form-help">Directory for storing exported audio files</div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Storage Settings</button>
+                    <button type="button" class="btn btn-outline" onclick="resetStorageSettings()">Reset to
+                        Defaults</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- UI Preferences Tab -->
+<div id="ui-tab" class="tab-content">
+    <div class="grid grid-2">
+        <!-- Server Settings -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Server Settings</h3>
+                <p class="card-description">Configure the web interface server</p>
+            </div>
+            <div class="card-content">
+                <form id="server-settings-form" data-action="/api/settings/server">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="server-host" class="form-label">Host</label>
+                            <input type="text" id="server-host" name="host" class="form-input" placeholder="0.0.0.0">
+                            <div class="form-help">Server bind address (0.0.0.0 for all interfaces)</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="server-port" class="form-label">Port</label>
+                            <input type="number" id="server-port" name="port" class="form-input" min="1" max="65535"
+                                placeholder="3000">
+                            <div class="form-help">Server port number</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="server-debug" name="debug"> Debug Mode
+                        </label>
+                        <div class="form-help">Enable debug logging and error details</div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save Server Settings</button>
+                        <div class="form-help" style="margin-top: var(--spacing-sm);">
+                            <strong>Note:</strong> Server restart required for changes to take effect
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Audiobook Defaults -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Audiobook Defaults</h3>
+                <p class="card-description">Default settings for audiobook generation</p>
+            </div>
+            <div class="card-content">
+                <form id="audiobook-settings-form" data-action="/api/settings/audiobook">
+                    <div class="form-group">
+                        <label for="ab-output-format" class="form-label">Output Format</label>
+                        <select id="ab-output-format" name="output_format" class="form-select">
+                            <option value="wav">WAV (Uncompressed)</option>
+                            <option value="mp3">MP3 (Compressed)</option>
+                            <option value="flac">FLAC (Lossless)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="ab-sample-rate" class="form-label">Sample Rate</label>
+                            <select id="ab-sample-rate" name="sample_rate" class="form-select">
+                                <option value="22050">22,050 Hz</option>
+                                <option value="24000">24,000 Hz</option>
+                                <option value="44100">44,100 Hz</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ab-bit-depth" class="form-label">Bit Depth</label>
+                            <select id="ab-bit-depth" name="bit_depth" class="form-select">
+                                <option value="16">16-bit</option>
+                                <option value="24">24-bit</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="ab-normalize" name="normalize" checked> Audio Normalization
+                        </label>
+                        <div class="form-help">Balance audio levels across the entire audiobook</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="ab-chapter-markers" name="chapter_markers" checked> Chapter
+                            Markers
+                        </label>
+                        <div class="form-help">Add chapter metadata to output files</div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save Audiobook Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let currentSettingsTab = 'backend';
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Load current settings
+        loadSettings();
+
+        // Initialize form handlers
+        initializeSettingsForms();
+    });
+
+    function switchSettingsTab(tab) {
+        // Update tab buttons
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`[onclick="switchSettingsTab('${tab}')"]`).classList.add('active');
+
+        // Update tab content
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById(`${tab}-tab`).classList.add('active');
+
+        currentSettingsTab = tab;
+    }
+
+    function initializeSettingsForms() {
+        // Backend settings
+        document.getElementById('backend-settings-form').addEventListener('submit', handleSettingsSubmit);
+
+        // Audio settings
+        document.getElementById('voice-settings-form').addEventListener('submit', handleSettingsSubmit);
+        document.getElementById('sfx-settings-form').addEventListener('submit', handleSettingsSubmit);
+        document.getElementById('bg-settings-form').addEventListener('submit', handleSettingsSubmit);
+
+        // Storage settings
+        document.getElementById('storage-settings-form').addEventListener('submit', handleSettingsSubmit);
+
+        // UI settings
+        document.getElementById('server-settings-form').addEventListener('submit', handleSettingsSubmit);
+        document.getElementById('audiobook-settings-form').addEventListener('submit', handleSettingsSubmit);
+    }
+
+    async function loadSettings() {
+        try {
+            const response = await fetch('/api/settings');
+            if (!response.ok) throw new Error('Failed to load settings');
+
+            const settings = await response.json();
+            populateSettingsForms(settings);
+
+        } catch (error) {
+            console.error('Failed to load settings:', error);
+            showError('Failed to load current settings');
+        }
+    }
+
+    function populateSettingsForms(settings) {
+        // Backend settings
+        if (settings.backend) {
+            document.getElementById('backend-host').value = settings.backend.host || 'localhost';
+            document.getElementById('backend-port').value = settings.backend.port || 8000;
+            document.getElementById('backend-timeout').value = settings.backend.timeout || 30;
+            document.getElementById('backend-retries').value = settings.backend.retry_attempts || 3;
+        }
+
+        // Audio settings
+        if (settings.audio) {
+            if (settings.audio.voice) {
+                document.getElementById('voice-default-volume').value = settings.audio.voice.default_volume || 1.0;
+                document.getElementById('voice-normalize').checked = settings.audio.voice.normalize !== false;
+            }
+
+            if (settings.audio.sound_effects) {
+                document.getElementById('sfx-default-volume').value = settings.audio.sound_effects.default_volume || 0.8;
+                document.getElementById('sfx-fade-in').value = settings.audio.sound_effects.fade_in || 0.0;
+                document.getElementById('sfx-fade-out').value = settings.audio.sound_effects.fade_out || 0.0;
+                document.getElementById('sfx-pause-speech').checked = settings.audio.sound_effects.pause_speech !== false;
+            }
+
+            if (settings.audio.background) {
+                document.getElementById('bg-default-volume').value = settings.audio.background.default_volume || 0.3;
+                document.getElementById('bg-duck-level').value = settings.audio.background.duck_level || 0.2;
+                document.getElementById('bg-fade-in').value = settings.audio.background.fade_in || 1.0;
+                document.getElementById('bg-fade-out').value = settings.audio.background.fade_out || 1.0;
+                document.getElementById('bg-duck-speech').checked = settings.audio.background.duck_speech !== false;
+                document.getElementById('bg-loop').checked = settings.audio.background.loop !== false;
+            }
+        }
+
+        // Storage settings
+        if (settings.storage) {
+            document.getElementById('storage-voices').value = settings.storage.voices || './data/voices';
+            document.getElementById('storage-sfx').value = settings.storage.sound_effects || './data/sfx';
+            document.getElementById('storage-bg').value = settings.storage.background_audio || './data/background';
+            document.getElementById('storage-projects').value = settings.storage.projects || './data/projects';
+            document.getElementById('storage-exports').value = settings.storage.exports || './data/exports';
+        }
+
+        // Server settings
+        if (settings.server) {
+            document.getElementById('server-host').value = settings.server.host || '0.0.0.0';
+            document.getElementById('server-port').value = settings.server.port || 3000;
+            document.getElementById('server-debug').checked = settings.server.debug || false;
+        }
+
+        // Audiobook settings
+        if (settings.audiobook) {
+            document.getElementById('ab-output-format').value = settings.audiobook.output_format || 'wav';
+            document.getElementById('ab-sample-rate').value = settings.audiobook.sample_rate || 24000;
+            document.getElementById('ab-bit-depth').value = settings.audiobook.bit_depth || 16;
+            document.getElementById('ab-normalize').checked = settings.audiobook.normalize !== false;
+            document.getElementById('ab-chapter-markers').checked = settings.audiobook.chapter_markers !== false;
+        }
+    }
+
+    async function handleSettingsSubmit(event) {
+        event.preventDefault();
+
+        const form = event.target;
+        const formData = new FormData(form);
+        const action = form.getAttribute('data-action');
+
+        if (!action) {
+            showError('Settings action not specified');
+            return;
+        }
+
+        showProgressModal('Saving settings...');
+
+        try {
+            const response = await fetch(action, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Settings save failed');
+            }
+
+            const result = await response.json();
+            showSuccess('Settings saved successfully!');
+
+            // Some settings require restart
+            if (action.includes('/server') || action.includes('/backend')) {
+                showSuccess('Note: Server restart may be required for changes to take effect');
+            }
+
+        } catch (error) {
+            showError('Settings save failed: ' + error.message);
+        } finally {
+            closeProgressModal();
+        }
+    }
+
+    async function testConnection() {
+        const host = document.getElementById('backend-host').value;
+        const port = document.getElementById('backend-port').value;
+
+        showProgressModal('Testing connection...');
+
+        try {
+            const response = await fetch(`http://${host}:${port}/`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                showSuccess('Connection successful!');
+            } else {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+        } catch (error) {
+            showError('Connection failed: ' + error.message);
+        } finally {
+            closeProgressModal();
+        }
+    }
+
+    function resetBackendSettings() {
+        document.getElementById('backend-host').value = 'localhost';
+        document.getElementById('backend-port').value = '8000';
+        document.getElementById('backend-timeout').value = '30';
+        document.getElementById('backend-retries').value = '3';
+    }
+
+    function resetStorageSettings() {
+        document.getElementById('storage-voices').value = './data/voices';
+        document.getElementById('storage-sfx').value = './data/sfx';
+        document.getElementById('storage-bg').value = './data/background';
+        document.getElementById('storage-projects').value = './data/projects';
+        document.getElementById('storage-exports').value = './data/exports';
+    }
+</script>
+{% endblock %}

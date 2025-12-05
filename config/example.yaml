@@ -1,0 +1,30 @@
+# Example configuration for Talk2Me UI
+
+# Backend connection
+backend:
+  url: "http://localhost:8000" # Backend API URL
+
+# Audio settings
+audio:
+  sample_rate: 16000 # Audio sample rate in Hz
+  channels: 1 # Number of audio channels (1=mono, 2=stereo)
+
+# UI server settings
+ui:
+  host: "127.0.0.1" # UI server host (127.0.0.1 for local, 0.0.0.0 for external)
+  port: 8000 # UI server port
+
+# Legacy fields for compatibility
+server:
+  host: "127.0.0.1"
+  port: 8000
+
+# Model paths
+models:
+  stt_model_path: "models/vosk-model-small-en-us-0.15"
+  tts_model_path: "models/models/xtts/v2"
+  wake_word_model_path: "models/vosk-model-small-en-us-0.15"
+
+# Directories
+voices_dir: "data/voices"
+data_dir: "data"

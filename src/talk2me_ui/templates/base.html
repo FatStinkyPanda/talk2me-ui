@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Talk2Me UI{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/styles.css') }}">
+    <script src="{{ url_for('static', path='js/app.js') }}" defer></script>
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+    <!-- Navigation Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <h1>Talk2Me UI</h1>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="/" class="{% if request.url.path == '/' %}active{% endif %}">Dashboard</a></li>
+                    <li><a href="/voices" class="{% if request.url.path == '/voices' %}active{% endif %}">Voice
+                            Management</a></li>
+                    <li><a href="/stt" class="{% if request.url.path == '/stt' %}active{% endif %}">Speech-to-Text</a>
+                    </li>
+                    <li><a href="/tts" class="{% if request.url.path == '/tts' %}active{% endif %}">Text-to-Speech</a>
+                    </li>
+                    <li><a href="/audiobook"
+                            class="{% if request.url.path == '/audiobook' %}active{% endif %}">Audiobook Studio</a></li>
+                    <li><a href="/sounds" class="{% if request.url.path == '/sounds' %}active{% endif %}">Sound
+                            Library</a></li>
+                    <li><a href="/conversation"
+                            class="{% if request.url.path == '/conversation' %}active{% endif %}">Live Conversation</a>
+                    </li>
+                    <li><a href="/settings"
+                            class="{% if request.url.path == '/settings' %}active{% endif %}">Settings</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <div class="backend-status" id="backend-status">
+                    <span class="status-indicator" id="status-indicator"></span>
+                    <span id="status-text">Checking...</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-content">
+            <div class="sidebar-section">
+                <h3>Quick Actions</h3>
+                <ul class="sidebar-menu">
+                    <li><a href="/tts" class="quick-action">New TTS</a></li>
+                    <li><a href="/voices" class="quick-action">Create Voice</a></li>
+                    <li><a href="/audiobook" class="quick-action">New Audiobook</a></li>
+                    <li><a href="/sounds" class="quick-action">Add Sound</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Recent Activity</h3>
+                <div class="recent-activity" id="recent-activity">
+                    <p class="no-activity">No recent activity</p>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>System Info</h3>
+                <div class="system-info">
+                    <div class="info-item">
+                        <span class="label">Voices:</span>
+                        <span class="value" id="voice-count">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Projects:</span>
+                        <span class="value" id="project-count">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Storage:</span>
+                        <span class="value" id="storage-usage">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="main-content">
+        <div class="content-wrapper">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Progress Modal -->
+    <div class="modal" id="progress-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="progress-title">Processing...</h3>
+                <button class="close-btn" onclick="closeProgressModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <div class="progress-text" id="progress-text">Initializing...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div class="modal" id="error-modal">
+        <div class="modal-content error-modal">
+            <div class="modal-header">
+                <h3>Error</h3>
+                <button class="close-btn" onclick="closeErrorModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="error-message" id="error-message"></div>
+                <div class="error-details" id="error-details"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeErrorModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal" id="success-modal">
+        <div class="modal-content success-modal">
+            <div class="modal-header">
+                <h3>Success</h3>
+                <button class="close-btn" onclick="closeSuccessModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="success-message" id="success-message"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeSuccessModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+
+</html>

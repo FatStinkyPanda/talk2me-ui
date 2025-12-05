@@ -1,0 +1,481 @@
+{% extends "base.html" %}
+
+{% block title %}Text-to-Speech - Talk2Me UI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Text-to-Speech</h1>
+    <p class="page-description">Generate high-quality speech from text using custom voice profiles.</p>
+</div>
+
+<div class="grid grid-2">
+    <!-- Text Input Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Text Input</h3>
+            <p class="card-description">Enter the text you want to convert to speech</p>
+        </div>
+        <div class="card-content">
+            <form id="tts-form" data-action="/api/tts">
+                <div class="form-group">
+                    <label for="tts-text" class="form-label">Text to Speak *</label>
+                    <textarea id="tts-text" name="text" class="form-textarea" rows="8" required
+                        placeholder="Enter the text you want to convert to speech..."></textarea>
+                    <div class="form-help">Maximum 5000 characters. Supports SSML tags for advanced control.</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="tts-voice" class="form-label">Voice *</label>
+                    <select id="tts-voice" name="voice_id" class="form-select" required>
+                        <option value="">Loading voices...</option>
+                    </select>
+                    <div class="form-help">Select a voice profile for speech generation</div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="tts-speed" class="form-label">Speed</label>
+                        <input type="range" id="tts-speed" name="speed" class="form-input" min="0.5" max="2.0"
+                            step="0.1" value="1.0">
+                        <div class="form-help">Speech speed multiplier (0.5x - 2.0x)</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tts-pitch" class="form-label">Pitch</label>
+                        <input type="range" id="tts-pitch" name="pitch" class="form-input" min="-12" max="12" step="1"
+                            value="0">
+                        <div class="form-help">Pitch adjustment in semitones (-12 to +12)</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="tts-output-format" class="form-label">Output Format</label>
+                    <select id="tts-output-format" name="output_format" class="form-select">
+                        <option value="wav">WAV (Uncompressed)</option>
+                        <option value="mp3">MP3 (Compressed)</option>
+                        <option value="flac">FLAC (Lossless)</option>
+                    </select>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Generate Speech</button>
+                    <button type="button" class="btn btn-secondary" onclick="previewSpeech()">Preview</button>
+                    <button type="button" class="btn btn-outline" onclick="clearForm()">Clear</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Voice Preview Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Voice Preview</h3>
+            <p class="card-description">Test voices before generating full speech</p>
+        </div>
+        <div class="card-content">
+            <div class="voice-preview">
+                <div class="preview-text">
+                    "Hello, this is a preview of the selected voice."
+                </div>
+
+                <div class="preview-controls">
+                    <button id="preview-btn" class="btn btn-secondary" disabled>
+                        <span>🔊</span> Preview Voice
+                    </button>
+                </div>
+
+                <div class="preview-info" id="preview-info">
+                    Select a voice to enable preview
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generated Audio -->
+<div class="card" style="margin-top: var(--spacing-xl);">
+    <div class="card-header">
+        <h3 class="card-title">Generated Audio</h3>
+        <p class="card-description">Playback and download your generated speech</p>
+    </div>
+    <div class="card-content">
+        <div class="audio-output" id="audio-output">
+            <div class="empty-state">
+                <div class="empty-icon">🔊</div>
+                <div class="empty-title">No audio generated yet</div>
+                <div class="empty-description">Enter text and select a voice to generate speech</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Batch Generation -->
+<div class="card" style="margin-top: var(--spacing-xl);">
+    <div class="card-header">
+        <h3 class="card-title">Batch Generation</h3>
+        <p class="card-description">Generate multiple audio files from a list of texts</p>
+    </div>
+    <div class="card-content">
+        <form id="batch-tts-form" data-action="/api/tts/batch">
+            <div class="form-group">
+                <label for="batch-texts" class="form-label">Texts to Process</label>
+                <textarea id="batch-texts" name="texts" class="form-textarea" rows="6"
+                    placeholder="Enter multiple texts, one per line..."></textarea>
+                <div class="form-help">One text per line, maximum 50 texts</div>
+            </div>
+
+            <div class="form-group">
+                <label for="batch-voice" class="form-label">Voice for All</label>
+                <select id="batch-voice" name="voice_id" class="form-select">
+                    <option value="">Loading voices...</option>
+                </select>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Generate Batch</button>
+                <button type="button" class="btn btn-outline" onclick="clearBatchForm()">Clear</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Recent Generations -->
+<div class="card" style="margin-top: var(--spacing-xl);">
+    <div class="card-header">
+        <h3 class="card-title">Recent Generations</h3>
+        <p class="card-description">Your recently generated audio files</p>
+    </div>
+    <div class="card-content">
+        <div class="recent-generations" id="recent-generations">
+            <div class="empty-state">
+                <div class="empty-icon">📂</div>
+                <div class="empty-title">No recent generations</div>
+                <div class="empty-description">Generated audio files will appear here</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Load available voices
+        loadVoices();
+
+        // Initialize form handlers
+        initializeTTSForm();
+        initializeBatchForm();
+
+        // Initialize range sliders
+        initializeSliders();
+
+        // Update voices list every 30 seconds
+        setInterval(loadVoices, 30000);
+    });
+
+    async function loadVoices() {
+        try {
+            const response = await fetch('/api/voices');
+            if (!response.ok) throw new Error('Failed to load voices');
+
+            const voices = await response.json();
+            populateVoiceSelects(voices);
+
+        } catch (error) {
+            console.error('Failed to load voices:', error);
+            showError('Failed to load voices: ' + error.message);
+        }
+    }
+
+    function populateVoiceSelects(voices) {
+        const selects = ['tts-voice', 'batch-voice'];
+
+        selects.forEach(selectId => {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+
+            // Clear existing options except the first
+            while (select.children.length > 1) {
+                select.removeChild(select.lastChild);
+            }
+
+            // Add voice options
+            voices.forEach(voice => {
+                const option = document.createElement('option');
+                option.value = voice.id;
+                option.textContent = `${voice.name} (${voice.language || 'Unknown'})`;
+                select.appendChild(option);
+            });
+
+            // Update preview button state
+            updatePreviewButton();
+        });
+    }
+
+    function updatePreviewButton() {
+        const voiceSelect = document.getElementById('tts-voice');
+        const previewBtn = document.getElementById('preview-btn');
+        const previewInfo = document.getElementById('preview-info');
+
+        if (voiceSelect && voiceSelect.value) {
+            previewBtn.disabled = false;
+            previewInfo.textContent = `Selected: ${voiceSelect.options[voiceSelect.selectedIndex].text}`;
+        } else {
+            previewBtn.disabled = true;
+            previewInfo.textContent = 'Select a voice to enable preview';
+        }
+    }
+
+    function initializeTTSForm() {
+        const form = document.getElementById('tts-form');
+        const voiceSelect = document.getElementById('tts-voice');
+
+        form.addEventListener('submit', handleTTSGeneration);
+        voiceSelect.addEventListener('change', updatePreviewButton);
+    }
+
+    function initializeBatchForm() {
+        const form = document.getElementById('batch-tts-form');
+
+        form.addEventListener('submit', handleBatchGeneration);
+    }
+
+    function initializeSliders() {
+        const speedSlider = document.getElementById('tts-speed');
+        const pitchSlider = document.getElementById('tts-pitch');
+
+        // Add value display for sliders
+        [speedSlider, pitchSlider].forEach(slider => {
+            if (!slider) return;
+
+            const valueDisplay = document.createElement('div');
+            valueDisplay.className = 'slider-value';
+            valueDisplay.textContent = slider.value + (slider.id === 'tts-speed' ? 'x' : '');
+            slider.parentNode.appendChild(valueDisplay);
+
+            slider.addEventListener('input', function () {
+                valueDisplay.textContent = this.value + (this.id === 'tts-speed' ? 'x' : '');
+            });
+        });
+    }
+
+    async function handleTTSGeneration(event) {
+        event.preventDefault();
+
+        const form = event.target;
+        const formData = new FormData(form);
+
+        const text = formData.get('text').trim();
+        if (!text) {
+            showError('Please enter text to generate speech');
+            return;
+        }
+
+        if (text.length > 5000) {
+            showError('Text is too long (maximum 5000 characters)');
+            return;
+        }
+
+        showProgressModal('Starting speech generation...');
+
+        try {
+            const response = await fetch('/api/tts', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Speech generation failed');
+            }
+
+            const result = await response.json();
+            const taskId = result.task_id;
+
+            // Start polling for status
+            await pollTTSStatus(taskId, text);
+
+        } catch (error) {
+            showError('Speech generation failed: ' + error.message);
+            closeProgressModal();
+        }
+    }
+
+    async function pollTTSStatus(taskId, text) {
+        const maxAttempts = 60; // 60 seconds timeout
+        let attempts = 0;
+
+        const poll = async () => {
+            try {
+                const response = await fetch(`/api/tts/${taskId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to check status');
+                }
+
+                const status = await response.json();
+
+                if (status.status === 'completed') {
+                    closeProgressModal();
+                    displayGeneratedAudio(`/api/tts/audio/${taskId}`, status.filename, text);
+                } else if (status.status === 'failed') {
+                    closeProgressModal();
+                    showError('Speech generation failed: ' + (status.error || 'Unknown error'));
+                } else {
+                    // Still processing
+                    showProgressModal('Generating speech... (' + Math.min(attempts + 1, maxAttempts) + 's)');
+                    if (attempts < maxAttempts) {
+                        attempts++;
+                        setTimeout(poll, 1000); // Poll every second
+                    } else {
+                        closeProgressModal();
+                        showError('Speech generation timed out');
+                    }
+                }
+            } catch (error) {
+                closeProgressModal();
+                showError('Status check failed: ' + error.message);
+            }
+        };
+
+        poll();
+    }
+
+    async function handleBatchGeneration(event) {
+        event.preventDefault();
+
+        const form = event.target;
+        const formData = new FormData(form);
+
+        const texts = formData.get('texts').trim();
+        if (!texts) {
+            showError('Please enter texts for batch generation');
+            return;
+        }
+
+        const textLines = texts.split('\n').filter(line => line.trim());
+        if (textLines.length > 50) {
+            showError('Too many texts (maximum 50)');
+            return;
+        }
+
+        showProgressModal('Generating batch audio files...');
+
+        try {
+            const response = await fetch('/api/tts/batch', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Batch generation failed');
+            }
+
+            const result = await response.json();
+            showSuccess(`Generated ${result.count} audio files successfully`);
+
+            // Refresh recent generations
+            loadRecentGenerations();
+
+        } catch (error) {
+            showError('Batch generation failed: ' + error.message);
+        } finally {
+            closeProgressModal();
+        }
+    }
+
+    function displayGeneratedAudio(audioUrl, filename, text) {
+        const output = document.getElementById('audio-output');
+
+        output.innerHTML = `
+        <div class="generated-audio">
+            <div class="audio-player">
+                <audio controls>
+                    <source src="${audioUrl}" type="audio/wav">
+                    Your browser does not support audio playback.
+                </audio>
+                <div class="audio-info">
+                    <div class="audio-filename">${filename}</div>
+                    <div class="audio-text-preview">${text.length > 100 ? text.substring(0, 100) + '...' : text}</div>
+                </div>
+            </div>
+            <div class="audio-actions">
+                <a href="${audioUrl}" download="${filename}" class="btn btn-primary">Download</a>
+                <button class="btn btn-secondary" onclick="regenerateAudio()">Regenerate</button>
+            </div>
+        </div>
+    `;
+
+        // Refresh recent generations
+        loadRecentGenerations();
+    }
+
+    async function previewSpeech() {
+        const voiceSelect = document.getElementById('tts-voice');
+        const previewText = "Hello, this is a preview of the selected voice.";
+
+        if (!voiceSelect.value) {
+            showError('Please select a voice first');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('text', previewText);
+        formData.append('voice_id', voiceSelect.value);
+
+        showProgressModal('Generating preview...');
+
+        try {
+            const response = await fetch('/api/tts', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Preview generation failed');
+            }
+
+            const result = await response.json();
+
+            // Play the preview audio
+            const audio = new Audio(result.audio_url);
+            audio.play();
+
+            showSuccess('Playing voice preview');
+
+        } catch (error) {
+            showError('Preview failed: ' + error.message);
+        } finally {
+            closeProgressModal();
+        }
+    }
+
+    function clearForm() {
+        const form = document.getElementById('tts-form');
+        form.reset();
+
+        // Reset sliders
+        document.getElementById('tts-speed').value = '1.0';
+        document.getElementById('tts-pitch').value = '0';
+
+        updatePreviewButton();
+    }
+
+    function clearBatchForm() {
+        const form = document.getElementById('batch-tts-form');
+        form.reset();
+    }
+
+    async function loadRecentGenerations() {
+        // Placeholder for loading recent generations
+        // This would integrate with backend API
+    }
+
+    function regenerateAudio() {
+        // Trigger form submission again
+        document.getElementById('tts-form').dispatchEvent(new Event('submit'));
+    }
+</script>
+{% endblock %}

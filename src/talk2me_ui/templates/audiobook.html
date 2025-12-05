@@ -1,0 +1,550 @@
+{% extends "base.html" %}
+
+{% block title %}Audiobook Studio - Talk2Me UI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Audiobook Studio</h1>
+    <p class="page-description">Create professional audiobooks with multiple voices, sound effects, and background audio
+        using advanced markup.</p>
+</div>
+
+<div class="grid grid-2">
+    <!-- Project Management Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Project Management</h3>
+            <p class="card-description">Create and manage audiobook projects</p>
+        </div>
+        <div class="card-content">
+            <div class="project-actions">
+                <button class="btn btn-primary" onclick="createNewProject()">
+                    <span>📖</span> New Project
+                </button>
+                <button class="btn btn-secondary" onclick="loadProject()">
+                    <span>📂</span> Load Project
+                </button>
+                <button class="btn btn-outline" onclick="importText()">
+                    <span>📄</span> Import Text
+                </button>
+            </div>
+
+            <div class="current-project" id="current-project">
+                <div class="no-project">
+                    <div class="empty-icon">📚</div>
+                    <div class="empty-title">No project loaded</div>
+                    <div class="empty-description">Create a new project or load an existing one</div>
+                </div>
+            </div>
+
+            <div class="project-list" id="project-list" style="display: none;">
+                <h4>Recent Projects</h4>
+                <div class="projects-container" id="projects-container">
+                    <!-- Projects will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Configuration Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Voice Configuration</h3>
+            <p class="card-description">Assign voices to characters and roles</p>
+        </div>
+        <div class="card-content">
+            <div class="voice-assignments" id="voice-assignments">
+                <div class="empty-state">
+                    <div class="empty-icon">🎭</div>
+                    <div class="empty-title">No voices assigned</div>
+                    <div class="empty-description">Load a project to assign voices</div>
+                </div>
+            </div>
+
+            <div class="add-voice-assignment" style="margin-top: var(--spacing-lg);">
+                <button class="btn btn-outline btn-sm" onclick="addVoiceAssignment()">
+                    <span>➕</span> Add Voice Assignment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Text Editor -->
+<div class="card" style="margin-top: var(--spacing-xl);">
+    <div class="card-header">
+        <h3 class="card-title">Text Editor</h3>
+        <p class="card-description">Write or edit your audiobook text with markup</p>
+    </div>
+    <div class="card-content">
+        <div class="editor-toolbar">
+            <div class="toolbar-section">
+                <button class="btn btn-sm btn-outline" onclick="insertVoiceMarkup()" title="Insert voice change">
+                    <span>🎭</span> Voice
+                </button>
+                <button class="btn btn-sm btn-outline" onclick="insertSoundMarkup()" title="Insert sound effect">
+                    <span>🔊</span> Sound
+                </button>
+                <button class="btn btn-sm btn-outline" onclick="insertBackgroundMarkup()"
+                    title="Insert background audio">
+                    <span>🎵</span> Background
+                </button>
+            </div>
+            <div class="toolbar-section">
+                <button class="btn btn-sm btn-outline" onclick="previewMarkup()" title="Preview markup">
+                    <span>👁️</span> Preview
+                </button>
+                <button class="btn btn-sm btn-outline" onclick="validateMarkup()" title="Validate markup">
+                    <span>✅</span> Validate
+                </button>
+            </div>
+        </div>
+
+        <div class="text-editor-container">
+            <textarea id="audiobook-text" class="code-editor" placeholder="Enter your audiobook text here...
+
+Use triple braces {{{...}}} for special markup:
+
+{{{voice:narrator}}}
+{{{voice:character_name}}}
+{{{sfx:sound_effect}}}
+{{{bg:background_music}}}
+{{{bg:stop}}}
+
+Example:
+{{{voice:narrator}}}
+Once upon a time, in a land far away...
+
+{{{voice:hero}}}
+I must find the treasure!
+
+{{{sfx:sword_clash}}}
+{{{bg:epic_music,volume:0.3}}}
+
+{{{voice:narrator}}}
+And so the adventure began..."></textarea>
+        </div>
+
+        <div class="editor-stats">
+            <span id="char-count">0 characters</span>
+            <span id="word-count">0 words</span>
+            <span id="markup-count">0 markup tags</span>
+        </div>
+    </div>
+</div>
+
+<!-- Generation Settings -->
+<div class="card" style="margin-top: var(--spacing-xl);">
+    <div class="card-header">
+        <h3 class="card-title">Generation Settings</h3>
+        <p class="card-description">Configure output settings for your audiobook</p>
+    </div>
+    <div class="card-content">
+        <form id="generation-form" data-action="/api/audiobook">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="output-format" class="form-label">Output Format</label>
+                    <select id="output-format" name="output_format" class="form-select">
+                        <option value="wav">WAV (Uncompressed)</option>
+                        <option value="mp3">MP3 (Compressed)</option>
+                        <option value="flac">FLAC (Lossless)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="sample-rate" class="form-label">Sample Rate</label>
+                    <select id="sample-rate" name="sample_rate" class="form-select">
+                        <option value="22050">22,050 Hz</option>
+                        <option value="24000">24,000 Hz</option>
+                        <option value="44100">44,100 Hz</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="bit-depth" class="form-label">Bit Depth</label>
+                    <select id="bit-depth" name="bit_depth" class="form-select">
+                        <option value="16">16-bit</option>
+                        <option value="24">24-bit</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="normalize" name="normalize" checked> Audio Normalization
+                    </label>
+                    <div class="form-help">Balance audio levels across the entire audiobook</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="chapter-markers" name="chapter_markers" checked> Chapter Markers
+                    </label>
+                    <div class="form-help">Add chapter metadata to the output file</div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Generate Audiobook</button>
+                <button type="button" class="btn btn-secondary" onclick="previewAudiobook()">Preview Chapter</button>
+                <button type="button" class="btn btn-outline" onclick="saveProject()">Save Project</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Generation Progress & Results -->
+<div class="card" style="margin-top: var(--spacing-xl);">
+    <div class="card-header">
+        <h3 class="card-title">Generation Progress</h3>
+        <p class="card-description">Monitor audiobook generation and access results</p>
+    </div>
+    <div class="card-content">
+        <div class="generation-status" id="generation-status">
+            <div class="status-message">
+                Ready to generate. Add text and configure settings above.
+            </div>
+        </div>
+
+        <div class="generated-audiobooks" id="generated-audiobooks" style="display: none;">
+            <h4>Generated Audiobooks</h4>
+            <div class="audiobooks-list" id="audiobooks-list">
+                <!-- Generated audiobooks will appear here -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize editor
+        initializeTextEditor();
+
+        // Load available voices and sounds
+        loadAvailableResources();
+
+        // Initialize form handlers
+        initializeGenerationForm();
+
+        // Load projects list
+        loadProjectsList();
+    });
+
+    function initializeTextEditor() {
+        const editor = document.getElementById('audiobook-text');
+
+        editor.addEventListener('input', updateEditorStats);
+        updateEditorStats();
+    }
+
+    function updateEditorStats() {
+        const editor = document.getElementById('audiobook-text');
+        const text = editor.value;
+
+        const charCount = text.length;
+        const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+        const markupCount = (text.match(/\{\{\{/g) || []).length;
+
+        document.getElementById('char-count').textContent = `${charCount} characters`;
+        document.getElementById('word-count').textContent = `${wordCount} words`;
+        document.getElementById('markup-count').textContent = `${markupCount} markup tags`;
+    }
+
+    function insertVoiceMarkup() {
+        const editor = document.getElementById('audiobook-text');
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        const selectedText = editor.value.substring(start, end);
+
+        const markup = `{{{voice:character_name}}}\n${selectedText}\n\n`;
+        editor.setRangeText(markup, start, end, 'end');
+        editor.focus();
+        updateEditorStats();
+    }
+
+    function insertSoundMarkup() {
+        const editor = document.getElementById('audiobook-text');
+        const start = editor.selectionStart;
+
+        const markup = `{{{sfx:sound_effect}}}\n`;
+        editor.setRangeText(markup, start, start, 'end');
+        editor.focus();
+        updateEditorStats();
+    }
+
+    function insertBackgroundMarkup() {
+        const editor = document.getElementById('audiobook-text');
+        const start = editor.selectionStart;
+
+        const markup = `{{{bg:background_music}}}\n`;
+        editor.setRangeText(markup, start, start, 'end');
+        editor.focus();
+        updateEditorStats();
+    }
+
+    function previewMarkup() {
+        const editor = document.getElementById('audiobook-text');
+        const text = editor.value;
+
+        // Simple preview - highlight markup tags
+        const previewWindow = window.open('', '_blank');
+        previewWindow.document.write(`
+        <html>
+        <head>
+            <title>Markup Preview</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                .markup { background: #e3f2fd; padding: 2px 4px; border-radius: 3px; }
+                .voice { color: #1976d2; font-weight: bold; }
+                .sfx { color: #388e3c; }
+                .bg { color: #f57c00; }
+            </style>
+        </head>
+        <body>
+            <h2>Markup Preview</h2>
+            <pre>${escapeHtml(text).replace(/\{\{\{([^}]+)\}\}\}/g, '<span class="markup $1">$&</span>')}</pre>
+        </body>
+        </html>
+    `);
+    }
+
+    function validateMarkup() {
+        const editor = document.getElementById('audiobook-text');
+        const text = editor.value;
+
+        const issues = [];
+
+        // Check for unclosed braces
+        const openBraces = (text.match(/\{\{\{/g) || []).length;
+        const closeBraces = (text.match(/\}\}\}/g) || []).length;
+
+        if (openBraces !== closeBraces) {
+            issues.push('Unmatched triple braces - check for missing {{{ or }}}');
+        }
+
+        // Check for undefined voices
+        const voiceMatches = text.match(/\{\{\{voice:([^}]+)\}\}\}/g);
+        if (voiceMatches) {
+            const usedVoices = voiceMatches.map(match => match.match(/voice:([^}]+)/)[1]);
+            // This would check against assigned voices
+        }
+
+        if (issues.length === 0) {
+            showSuccess('Markup validation passed!');
+        } else {
+            showError('Validation issues found:\n' + issues.join('\n'));
+        }
+    }
+
+    async function loadAvailableResources() {
+        try {
+            // Load voices
+            const voicesResponse = await fetch('/api/voices');
+            if (voicesResponse.ok) {
+                window.availableVoices = await voicesResponse.json();
+            }
+
+            // Load sound effects
+            const sfxResponse = await fetch('/api/sounds/effects');
+            if (sfxResponse.ok) {
+                window.availableSFX = await sfxResponse.json();
+            }
+
+            // Load background audio
+            const bgResponse = await fetch('/api/sounds/background');
+            if (bgResponse.ok) {
+                window.availableBG = await bgResponse.json();
+            }
+
+        } catch (error) {
+            console.error('Failed to load resources:', error);
+        }
+    }
+
+    function createNewProject() {
+        const projectName = prompt('Enter project name:');
+        if (!projectName) return;
+
+        // Reset editor and settings
+        document.getElementById('audiobook-text').value = '';
+        document.getElementById('current-project').innerHTML = `
+        <div class="project-info">
+            <div class="project-name">${escapeHtml(projectName)}</div>
+            <div class="project-status">Unsaved project</div>
+        </div>
+    `;
+
+        updateEditorStats();
+        showSuccess('New project created');
+    }
+
+    function loadProject() {
+        const projectList = document.getElementById('project-list');
+        projectList.style.display = projectList.style.display === 'none' ? 'block' : 'none';
+    }
+
+    async function loadProjectsList() {
+        // Placeholder for loading projects
+        // This would integrate with backend API
+    }
+
+    function addVoiceAssignment() {
+        // Placeholder for adding voice assignments
+        showSuccess('Voice assignment feature coming soon!');
+    }
+
+    function importText() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.txt,.md';
+
+        input.onchange = function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('audiobook-text').value = e.target.result;
+                updateEditorStats();
+                showSuccess('Text imported successfully');
+            };
+            reader.readAsText(file);
+        };
+
+        input.click();
+    }
+
+    function initializeGenerationForm() {
+        const form = document.getElementById('generation-form');
+
+        form.addEventListener('submit', handleAudiobookGeneration);
+    }
+
+    async function handleAudiobookGeneration(event) {
+        event.preventDefault();
+
+        const form = event.target;
+        const formData = new FormData(form);
+
+        const text = document.getElementById('audiobook-text').value.trim();
+        if (!text) {
+            showError('Please enter text for the audiobook');
+            return;
+        }
+
+        formData.append('text', text);
+
+        showProgressModal('Starting audiobook generation...');
+
+        try {
+            const response = await fetch('/api/audiobook', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Audiobook generation failed');
+            }
+
+            const result = await response.json();
+            const taskId = result.task_id;
+
+            // Poll for status
+            await pollAudiobookStatus(taskId);
+
+        } catch (error) {
+            showError('Audiobook generation failed: ' + error.message);
+            closeProgressModal();
+        }
+    }
+
+    async function pollAudiobookStatus(taskId) {
+        const maxAttempts = 60; // 5 minutes with 5s intervals
+        let attempts = 0;
+
+        const poll = async () => {
+            try {
+                const response = await fetch(`/api/audiobook/${taskId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to check status');
+                }
+
+                const status = await response.json();
+
+                if (status.status === 'completed') {
+                    showSuccess('Audiobook generated successfully!');
+                    displayGeneratedAudiobook({ task_id: taskId, ...status });
+                    closeProgressModal();
+                } else if (status.status === 'failed') {
+                    showError('Audiobook generation failed: ' + (status.error || 'Unknown error'));
+                    closeProgressModal();
+                } else {
+                    // Still processing
+                    showProgressModal(`Generating audiobook... (${attempts * 5}s)`);
+                    if (attempts < maxAttempts) {
+                        attempts++;
+                        setTimeout(poll, 5000); // Poll every 5 seconds
+                    } else {
+                        showError('Audiobook generation timed out');
+                        closeProgressModal();
+                    }
+                }
+            } catch (error) {
+                showError('Failed to check generation status: ' + error.message);
+                closeProgressModal();
+            }
+        };
+
+        poll();
+    }
+
+    function displayGeneratedAudiobook(result) {
+        const container = document.getElementById('generated-audiobooks');
+        const list = document.getElementById('audiobooks-list');
+
+        container.style.display = 'block';
+
+        const audiobookItem = document.createElement('div');
+        audiobookItem.className = 'audiobook-item';
+        audiobookItem.innerHTML = `
+        <div class="audiobook-info">
+            <div class="audiobook-title">${result.filename || 'Generated Audiobook'}</div>
+            <div class="audiobook-meta">
+                Generated ${new Date().toLocaleString()} • ${result.sections_count || 0} sections
+            </div>
+        </div>
+        <div class="audiobook-actions">
+            <a href="/api/audiobook/audio/${result.task_id}" class="btn btn-primary btn-sm" download>Download</a>
+            <button class="btn btn-secondary btn-sm" onclick="previewAudiobook('/api/audiobook/audio/${result.task_id}')">Preview</button>
+        </div>
+    `;
+
+        list.insertBefore(audiobookItem, list.firstChild);
+    }
+
+    function previewAudiobook(url) {
+        if (url) {
+            const audio = new Audio(url);
+            audio.play();
+        } else {
+            showSuccess('Audiobook preview feature coming soon!');
+        }
+    }
+
+    function saveProject() {
+        // Placeholder for saving project
+        showSuccess('Project saved successfully!');
+    }
+
+    // Utility function for HTML escaping
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}

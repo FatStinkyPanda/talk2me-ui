@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}Voice Management - Talk2Me UI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Voice Management</h1>
+    <p class="page-description">Create, manage, and organize custom voice profiles for text-to-speech synthesis.</p>
+</div>
+
+<div class="grid grid-2">
+    <!-- Create Voice Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Create New Voice</h3>
+            <p class="card-description">Upload audio samples to create a custom voice profile</p>
+        </div>
+        <div class="card-content">
+            <form id="create-voice-form" data-action="/api/voices" data-refresh="true">
+                <div class="form-group">
+                    <label for="voice-name" class="form-label">Voice Name *</label>
+                    <input type="text" id="voice-name" name="name" class="form-input" required minlength="2"
+                        placeholder="e.g., John Smith">
+                    <div class="form-help">A descriptive name for your voice profile</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="voice-language" class="form-label">Language *</label>
+                    <select id="voice-language" name="language" class="form-select" required>
+                        <option value="">Select language...</option>
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="it">Italian</option>
+                        <option value="pt">Portuguese</option>
+                        <option value="ru">Russian</option>
+                        <option value="ja">Japanese</option>
+                        <option value="ko">Korean</option>
+                        <option value="zh">Chinese</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="voice-description" class="form-label">Description</label>
+                    <textarea id="voice-description" name="description" class="form-textarea" rows="3"
+                        placeholder="Optional description of the voice characteristics..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Voice Samples *</label>
+                    <div class="file-upload">
+                        <div class="file-upload-icon">🎤</div>
+                        <div class="file-upload-text">Choose audio files or drag them here</div>
+                        <div class="file-upload-hint">WAV format recommended, 5-30 seconds each, minimum 3 samples</div>
+                        <input type="file" name="samples" class="file-input" multiple accept="audio/*" required>
+                    </div>
+                    <div class="sample-files-list" id="sample-files-list"></div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Create Voice</button>
+                    <button type="button" class="btn btn-secondary" onclick="resetCreateForm()">Reset</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Voice Guidelines Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Voice Sample Guidelines</h3>
+            <p class="card-description">Best practices for creating high-quality voice profiles</p>
+        </div>
+        <div class="card-content">
+            <div class="guidelines-list">
+                <div class="guideline-item">
+                    <div class="guideline-icon">📊</div>
+                    <div class="guideline-content">
+                        <strong>Quantity:</strong> Upload 5-10 audio samples for best results
+                    </div>
+                </div>
+                <div class="guideline-item">
+                    <div class="guideline-icon">⏱️</div>
+                    <div class="guideline-content">
+                        <strong>Duration:</strong> 5-30 seconds per sample
+                    </div>
+                </div>
+                <div class="guideline-item">
+                    <div class="guideline-icon">🎵</div>
+                    <div class="guideline-content">
+                        <strong>Format:</strong> WAV, 16-bit mono, 16kHz or 24kHz sample rate
+                    </div>
+                </div>
+                <div class="guideline-item">
+                    <div class="guideline-icon">🎭</div>
+                    <div class="guideline-content">
+                        <strong>Content:</strong> Varied sentences, natural speech patterns
+                    </div>
+                </div>
+                <div class="guideline-item">
+                    <div class="guideline-icon">🔇</div>
+                    <div class="guideline-content">
+                        <strong>Quality:</strong> Minimal background noise, clear recording
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Existing Voices Section -->
+<div class="card" style="margin-top: var(--spacing-xl);">
+    <div class="card-header">
+        <h3 class="card-title">Your Voices</h3>
+        <p class="card-description">Manage and organize your existing voice profiles</p>
+    </div>
+    <div class="card-content">
+        <div class="voices-grid" id="voices-grid">
+            <div class="voice-card empty-state">
+                <div class="empty-icon">🎤</div>
+                <div class="empty-title">No voices yet</div>
+                <div class="empty-description">Create your first voice profile using the form above</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Load existing voices
+        loadVoices();
+
+        // Initialize file upload handling
+        initializeVoiceFileUpload();
+
+        // Update voices list every 30 seconds
+        setInterval(loadVoices, 30000);
+    });
+
+    function initializeVoiceFileUpload() {
+        const fileInput = document.querySelector('#create-voice-form .file-input');
+        const filesList = document.getElementById('sample-files-list');
+
+        fileInput.addEventListener('change', function (e) {
+            updateSampleFilesList(e.target.files, filesList);
+        });
+    }
+
+    function updateSampleFilesList(files, container) {
+        container.innerHTML = '';
+
+        if (files.length === 0) return;
+
+        const list = document.createElement('div');
+        list.className = 'files-preview';
+
+        Array.from(files).forEach((file, index) => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-preview-item';
+
+            const fileIcon = getFileIcon(file.type);
+            const fileSize = formatFileSize(file.size);
+
+            fileItem.innerHTML = `
+            <div class="file-info">
+                <span class="file-icon">${fileIcon}</span>
+                <span class="file-name">${file.name}</span>
+                <span class="file-size">${fileSize}</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeSampleFile(${index})">
+                Remove
+            </button>
+        `;
+
+            list.appendChild(fileItem);
+        });
+
+        container.appendChild(list);
+    }
+
+    function getFileIcon(mimeType) {
+        if (mimeType.startsWith('audio/')) {
+            return '🎵';
+        }
+        return '📄';
+    }
+
+    function removeSampleFile(index) {
+        const fileInput = document.querySelector('#create-voice-form .file-input');
+        const filesList = document.getElementById('sample-files-list');
+
+        // Create new FileList without the removed file
+        const dt = new DataTransfer();
+        const files = Array.from(fileInput.files);
+
+        files.forEach((file, i) => {
+            if (i !== index) {
+                dt.items.add(file);
+            }
+        });
+
+        fileInput.files = dt.files;
+        updateSampleFilesList(fileInput.files, filesList);
+    }
+
+    function resetCreateForm() {
+        const form = document.getElementById('create-voice-form');
+        form.reset();
+        document.getElementById('sample-files-list').innerHTML = '';
+    }
+
+    async function loadVoices() {
+        try {
+            const response = await fetch('/api/voices');
+            if (!response.ok) throw new Error('Failed to load voices');
+
+            const voices = await response.json();
+            renderVoices(voices);
+
+        } catch (error) {
+            console.error('Failed to load voices:', error);
+            showError('Failed to load voices: ' + error.message);
+        }
+    }
+
+    function renderVoices(voices) {
+        const container = document.getElementById('voices-grid');
+
+        if (voices.length === 0) {
+            container.innerHTML = `
+            <div class="voice-card empty-state">
+                <div class="empty-icon">🎤</div>
+                <div class="empty-title">No voices yet</div>
+                <div class="empty-description">Create your first voice profile using the form above</div>
+            </div>
+        `;
+            return;
+        }
+
+        container.innerHTML = voices.map(voice => `
+        <div class="voice-card">
+            <div class="voice-header">
+                <div class="voice-name">${escapeHtml(voice.name)}</div>
+                <div class="voice-language">${voice.language || 'Unknown'}</div>
+            </div>
+            <div class="voice-description">
+                ${voice.description ? escapeHtml(voice.description) : 'No description'}
+            </div>
+            <div class="voice-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Samples:</span>
+                    <span class="meta-value">${voice.samples_count || 0}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Created:</span>
+                    <span class="meta-value">${formatDate(voice.created_at)}</span>
+                </div>
+            </div>
+            <div class="voice-actions">
+                <button class="btn btn-sm btn-outline" onclick="testVoice('${voice.id}')">
+                    Test
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="editVoice('${voice.id}')">
+                    Edit
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteVoice('${voice.id}')">
+                    Delete
+                </button>
+            </div>
+        </div>
+    `).join('');
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return 'Unknown';
+        const date = new Date(dateString);
+        return date.toLocaleDateString();
+    }
+
+    async function testVoice(voiceId) {
+        // Placeholder for voice testing functionality
+        showSuccess('Voice testing feature coming soon!');
+    }
+
+    async function editVoice(voiceId) {
+        // Placeholder for voice editing functionality
+        showSuccess('Voice editing feature coming soon!');
+    }
+
+    async function deleteVoice(voiceId) {
+        if (!confirm('Are you sure you want to delete this voice? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            showProgressModal('Deleting voice...');
+
+            const response = await fetch(`/api/voices/${voiceId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) throw new Error('Failed to delete voice');
+
+            showSuccess('Voice deleted successfully');
+            loadVoices(); // Refresh the list
+
+        } catch (error) {
+            showError('Failed to delete voice: ' + error.message);
+        } finally {
+            closeProgressModal();
+        }
+    }
+
+    // Utility function for HTML escaping
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}

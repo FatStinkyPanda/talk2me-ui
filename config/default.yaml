@@ -1,0 +1,25 @@
+# Default configuration for Talk2Me UI
+
+backend:
+  url: "http://localhost:8000"
+
+audio:
+  sample_rate: 16000
+  channels: 1
+
+ui:
+  host: "0.0.0.0"
+  port: 8000
+
+# Legacy fields for compatibility
+server:
+  host: "0.0.0.0"
+  port: 8000
+
+models:
+  stt_model_path: "models/vosk-model-small-en-us-0.15"
+  tts_model_path: "models/models/xtts/v2"
+  wake_word_model_path: "models/vosk-model-small-en-us-0.15"
+
+voices_dir: "data/voices"
+data_dir: "data"

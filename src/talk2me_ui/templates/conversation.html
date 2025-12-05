@@ -1,0 +1,540 @@
+{% extends "base.html" %}
+
+{% block title %}Live Conversation - Talk2Me UI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Live Conversation</h1>
+    <p class="page-description">Real-time bidirectional audio conversation with wake word detection and live
+        transcription.</p>
+</div>
+
+<div class="grid grid-2">
+    <!-- Conversation Control Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Conversation Control</h3>
+            <p class="card-description">Start and manage your live conversation</p>
+        </div>
+        <div class="card-content">
+            <div class="conversation-interface">
+                <button id="conversation-button" class="conversation-button disconnected">
+                    <span>🎙️</span>
+                    <span>Connect to Conversation</span>
+                </button>
+                <div id="conversation-status" class="conversation-status">
+                    Click to start real-time conversation
+                </div>
+            </div>
+
+            <div class="conversation-controls" style="margin-top: var(--spacing-lg);">
+                <div class="form-group">
+                    <label for="wake-word" class="form-label">Wake Word</label>
+                    <input type="text" id="wake-word" class="form-input" placeholder="e.g., Hey Talk2Me"
+                        value="hey talk2me">
+                    <div class="form-help">Say this word to activate the assistant</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="voice-select" class="form-label">Voice</label>
+                    <select id="voice-select" class="form-select">
+                        <option value="">Loading voices...</option>
+                    </select>
+                    <div class="form-help">Choose the voice for TTS responses</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="auto-tts" checked> Auto TTS
+                    </label>
+                    <div class="form-help">Automatically play TTS responses</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio Visualization Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Audio Visualization</h3>
+            <p class="card-description">Real-time audio levels and status</p>
+        </div>
+        <div class="card-content">
+            <div class="audio-visualization">
+                <div class="audio-levels">
+                    <div class="level-label">Input Level</div>
+                    <div class="level-bar">
+                        <div class="level-fill" id="input-level" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="audio-levels">
+                    <div class="level-label">Output Level</div>
+                    <div class="level-bar">
+                        <div class="level-fill" id="output-level" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="audio-status">
+                    <div class="status-item">
+                        <span class="status-label">Wake Word:</span>
+                        <span class="status-value" id="wake-word-status">Inactive</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Recording:</span>
+                        <span class="status-value" id="recording-status">Stopped</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Connection:</span>
+                        <span class="status-value" id="connection-status">Disconnected</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Live Transcription -->
+<div class="card" style="margin-top: var(--spacing-xl);">
+    <div class="card-header">
+        <h3 class="card-title">Live Transcription</h3>
+        <p class="card-description">Real-time speech-to-text and conversation history</p>
+    </div>
+    <div class="card-content">
+        <div class="transcription-container">
+            <div class="transcription-output" id="transcription-output">
+                <div class="empty-state">
+                    <div class="empty-icon">💬</div>
+                    <div class="empty-title">No conversation yet</div>
+                    <div class="empty-description">Connect to start a live conversation</div>
+                </div>
+            </div>
+
+            <div class="transcription-actions" id="transcription-actions" style="display: none;">
+                <button class="btn btn-secondary" onclick="clearConversation()">
+                    <span>🗑️</span> Clear Conversation
+                </button>
+                <button class="btn btn-secondary" onclick="exportConversation()">
+                    <span>💾</span> Export Chat
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Conversation Features -->
+<div class="card" style="margin-top: var(--spacing-xl);">
+    <div class="card-header">
+        <h3 class="card-title">Conversation Features</h3>
+        <p class="card-description">Available capabilities during live conversation</p>
+    </div>
+    <div class="card-content">
+        <div class="features-grid">
+            <div class="feature-item">
+                <div class="feature-icon">🎯</div>
+                <div class="feature-content">
+                    <div class="feature-title">Wake Word Detection</div>
+                    <div class="feature-description">Activate the assistant by saying your wake word</div>
+                </div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">🎤</div>
+                <div class="feature-content">
+                    <div class="feature-title">Real-time STT</div>
+                    <div class="feature-description">Live speech-to-text transcription</div>
+                </div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">🔊</div>
+                <div class="feature-content">
+                    <div class="feature-title">TTS Playback</div>
+                    <div class="feature-description">Text-to-speech responses with voice selection</div>
+                </div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">📊</div>
+                <div class="feature-content">
+                    <div class="feature-title">Audio Visualization</div>
+                    <div class="feature-description">Real-time audio level monitoring</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize conversation functionality
+        initializeConversation();
+        loadVoices();
+    });
+
+    let websocket = null;
+    let conversationId = null;
+    let mediaRecorder = null;
+    let audioContext = null;
+    let analyser = null;
+    let animationFrame = null;
+    let isRecording = false;
+    let conversationHistory = [];
+
+    function initializeConversation() {
+        const conversationButton = document.getElementById('conversation-button');
+        const statusDiv = document.getElementById('conversation-status');
+
+        conversationButton.addEventListener('click', toggleConversation);
+    }
+
+    async function loadVoices() {
+        try {
+            const response = await fetch('/api/voices');
+            if (response.ok) {
+                const voices = await response.json();
+                const voiceSelect = document.getElementById('voice-select');
+
+                voiceSelect.innerHTML = '<option value="">Select a voice...</option>';
+                voices.forEach(voice => {
+                    const option = document.createElement('option');
+                    option.value = voice.id;
+                    option.textContent = voice.name;
+                    voiceSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load voices:', error);
+        }
+    }
+
+    async function toggleConversation() {
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+            await disconnectConversation();
+        } else {
+            await connectConversation();
+        }
+    }
+
+    async function connectConversation() {
+        const conversationButton = document.getElementById('conversation-button');
+        const statusDiv = document.getElementById('conversation-status');
+
+        try {
+            conversationButton.className = 'conversation-button connecting';
+            conversationButton.innerHTML = '<span>⏳</span><span>Connecting...</span>';
+            statusDiv.textContent = 'Establishing WebSocket connection...';
+
+            // Connect to WebSocket
+            websocket = new WebSocket(`ws://${window.location.host}/ws/conversation`);
+
+            websocket.onopen = handleWebSocketOpen;
+            websocket.onmessage = handleWebSocketMessage;
+            websocket.onclose = handleWebSocketClose;
+            websocket.onerror = handleWebSocketError;
+
+        } catch (error) {
+            console.error('Failed to connect:', error);
+            conversationButton.className = 'conversation-button disconnected';
+            conversationButton.innerHTML = '<span>❌</span><span>Connection Failed</span>';
+            statusDiv.textContent = 'Failed to connect. Please try again.';
+        }
+    }
+
+    async function disconnectConversation() {
+        if (websocket) {
+            websocket.close();
+        }
+        stopRecording();
+        updateConnectionStatus('Disconnected');
+    }
+
+    function handleWebSocketOpen(event) {
+        const conversationButton = document.getElementById('conversation-button');
+        const statusDiv = document.getElementById('conversation-status');
+
+        conversationButton.className = 'conversation-button connected';
+        conversationButton.innerHTML = '<span>🎙️</span><span>Connected - Click to Disconnect</span>';
+        statusDiv.textContent = 'Connected! Say your wake word to start.';
+        updateConnectionStatus('Connected');
+
+        // Initialize audio recording
+        initializeAudioRecording();
+    }
+
+    function handleWebSocketMessage(event) {
+        try {
+            const data = JSON.parse(event.data);
+            handleConversationMessage(data);
+        } catch (error) {
+            console.error('Failed to parse WebSocket message:', error);
+        }
+    }
+
+    function handleWebSocketClose(event) {
+        const conversationButton = document.getElementById('conversation-button');
+        const statusDiv = document.getElementById('conversation-status');
+
+        conversationButton.className = 'conversation-button disconnected';
+        conversationButton.innerHTML = '<span>🔌</span><span>Disconnected - Click to Connect</span>';
+        statusDiv.textContent = 'Disconnected from conversation.';
+        updateConnectionStatus('Disconnected');
+
+        websocket = null;
+        conversationId = null;
+        stopRecording();
+    }
+
+    function handleWebSocketError(event) {
+        console.error('WebSocket error:', event);
+        updateConnectionStatus('Error');
+    }
+
+    function handleConversationMessage(data) {
+        const messageType = data.type;
+
+        switch (messageType) {
+            case 'connected':
+                conversationId = data.conversation_id;
+                addConversationMessage('system', 'Conversation started', 'system');
+                break;
+
+            case 'transcription':
+                addConversationMessage('user', data.text, 'transcription');
+                break;
+
+            case 'tts_audio':
+                playAudioResponse(data.audio);
+                break;
+
+            case 'wake_word_detected':
+                updateWakeWordStatus('Active');
+                addConversationMessage('system', 'Wake word detected - listening...', 'wake_word');
+                break;
+
+            case 'wake_word_activated':
+                updateWakeWordStatus('Active');
+                break;
+
+            case 'recording_started':
+                updateRecordingStatus('Active');
+                break;
+
+            case 'recording_stopped':
+                updateRecordingStatus('Stopped');
+                break;
+
+            default:
+                console.log('Unknown message type:', messageType, data);
+        }
+    }
+
+    async function initializeAudioRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+
+            analyser.fftSize = 256;
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            // Start visualization
+            function updateVisualization() {
+                analyser.getByteFrequencyData(dataArray);
+                const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+                const level = (average / 255) * 100;
+                document.getElementById('input-level').style.width = level + '%';
+                animationFrame = requestAnimationFrame(updateVisualization);
+            }
+            updateVisualization();
+
+            // Initialize MediaRecorder
+            mediaRecorder = new MediaRecorder(stream, {
+                mimeType: 'audio/webm;codecs=opus'
+            });
+
+            mediaRecorder.ondataavailable = handleAudioData;
+            mediaRecorder.onstop = handleRecordingStop;
+
+        } catch (error) {
+            console.error('Failed to initialize audio recording:', error);
+            window.Talk2MeUI.showError('Failed to access microphone. Please check permissions.');
+        }
+    }
+
+    function handleAudioData(event) {
+        if (event.data.size > 0 && websocket && websocket.readyState === WebSocket.OPEN) {
+            // Send audio data to server
+            websocket.send(JSON.stringify({
+                type: 'audio_data',
+                audio: Array.from(new Uint8Array(event.data))
+            }));
+        }
+    }
+
+    function handleRecordingStop() {
+        isRecording = false;
+        updateRecordingStatus('Stopped');
+    }
+
+    function startRecording() {
+        if (mediaRecorder && !isRecording) {
+            isRecording = true;
+            mediaRecorder.start(100); // Send data every 100ms
+            updateRecordingStatus('Active');
+
+            // Send start recording message
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({ type: 'start_recording' }));
+            }
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && isRecording) {
+            mediaRecorder.stop();
+            updateRecordingStatus('Stopped');
+
+            // Send stop recording message
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({ type: 'stop_recording' }));
+            }
+        }
+    }
+
+    function addConversationMessage(sender, text, type = 'message') {
+        const output = document.getElementById('transcription-output');
+        const actions = document.getElementById('transcription-actions');
+
+        conversationHistory.push({ sender, text, type, timestamp: new Date() });
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `conversation-message ${sender}`;
+
+        const timestamp = new Date().toLocaleTimeString();
+        messageDiv.innerHTML = `
+            <div class="message-header">
+                <div class="message-sender">${sender === 'user' ? 'You' : sender === 'assistant' ? 'Assistant' : 'System'}</div>
+                <div class="message-time">${timestamp}</div>
+            </div>
+            <div class="message-text">${escapeHtml(text)}</div>
+        `;
+
+        // Remove empty state if present
+        const emptyState = output.querySelector('.empty-state');
+        if (emptyState) {
+            output.removeChild(emptyState);
+        }
+
+        output.appendChild(messageDiv);
+        output.scrollTop = output.scrollHeight;
+        actions.style.display = 'flex';
+    }
+
+    function playAudioResponse(audioData) {
+        if (!document.getElementById('auto-tts').checked) {
+            return;
+        }
+
+        try {
+            const audioBuffer = Uint8Array.from(audioData);
+            const blob = new Blob([audioBuffer], { type: 'audio/wav' });
+            const audioUrl = URL.createObjectURL(blob);
+            const audio = new Audio(audioUrl);
+
+            audio.onended = () => URL.revokeObjectURL(audioUrl);
+            audio.play();
+
+            // Update output level visualization
+            audio.addEventListener('timeupdate', () => {
+                const level = (audio.currentTime / audio.duration) * 100;
+                document.getElementById('output-level').style.width = level + '%';
+            });
+
+        } catch (error) {
+            console.error('Failed to play audio response:', error);
+        }
+    }
+
+    function updateWakeWordStatus(status) {
+        document.getElementById('wake-word-status').textContent = status;
+    }
+
+    function updateRecordingStatus(status) {
+        document.getElementById('recording-status').textContent = status;
+    }
+
+    function updateConnectionStatus(status) {
+        document.getElementById('connection-status').textContent = status;
+    }
+
+    function clearConversation() {
+        const output = document.getElementById('transcription-output');
+        const actions = document.getElementById('transcription-actions');
+
+        output.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">💬</div>
+                <div class="empty-title">No conversation yet</div>
+                <div class="empty-description">Connect to start a live conversation</div>
+            </div>
+        `;
+
+        actions.style.display = 'none';
+        conversationHistory = [];
+    }
+
+    function exportConversation() {
+        if (conversationHistory.length === 0) {
+            window.Talk2MeUI.showError('No conversation to export');
+            return;
+        }
+
+        const exportText = conversationHistory.map(msg => {
+            const time = msg.timestamp.toLocaleString();
+            const sender = msg.sender === 'user' ? 'You' : msg.sender === 'assistant' ? 'Assistant' : 'System';
+            return `[${time}] ${sender}: ${msg.text}`;
+        }).join('\n\n');
+
+        const blob = new Blob([exportText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `conversation_${Date.now()}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // Wake word detection (simplified - would need actual wake word engine)
+    function checkWakeWord(text) {
+        const wakeWord = document.getElementById('wake-word').value.toLowerCase().trim();
+        if (wakeWord && text.toLowerCase().includes(wakeWord)) {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({ type: 'wake_word_detected' }));
+            }
+            return true;
+        }
+        return false;
+    }
+
+    // Utility function for HTML escaping
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+        if (websocket) {
+            websocket.close();
+        }
+        if (animationFrame) {
+            cancelAnimationFrame(animationFrame);
+        }
+        stopRecording();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Talk2Me UI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-description">System overview and quick actions for Talk2Me operations.</p>
+</div>
+
+<div class="grid grid-2">
+    <!-- System Status Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">System Status</h3>
+            <p class="card-description">Current system health and connectivity</p>
+        </div>
+        <div class="card-content">
+            <div class="system-status-grid">
+                <div class="status-item">
+                    <div class="status-label">Backend Connection</div>
+                    <div class="status-value">
+                        <span class="status-indicator" id="backend-status-indicator"></span>
+                        <span id="backend-status-text">Checking...</span>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Available Voices</div>
+                    <div class="status-value" id="voices-status">Loading...</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Active Projects</div>
+                    <div class="status-value" id="projects-status">0</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">System Load</div>
+                    <div class="status-value" id="system-load">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Quick Actions</h3>
+            <p class="card-description">Commonly used operations</p>
+        </div>
+        <div class="card-content">
+            <div class="quick-actions-grid">
+                <a href="/tts" class="btn btn-primary quick-action-card">
+                    <div class="action-icon">🎤</div>
+                    <div class="action-text">New TTS</div>
+                </a>
+                <a href="/voices" class="btn btn-secondary quick-action-card">
+                    <div class="action-icon">👤</div>
+                    <div class="action-text">Create Voice</div>
+                </a>
+                <a href="/audiobook" class="btn btn-secondary quick-action-card">
+                    <div class="action-icon">📖</div>
+                    <div class="action-text">New Audiobook</div>
+                </a>
+                <a href="/stt" class="btn btn-secondary quick-action-card">
+                    <div class="action-icon">🎧</div>
+                    <div class="action-text">Record Audio</div>
+                </a>
+                <a href="/conversation" class="btn btn-primary quick-action-card">
+                    <div class="action-icon">💬</div>
+                    <div class="action-text">Live Conversation</div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-2" style="margin-top: var(--spacing-xl);">
+    <!-- Recent Activity Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Recent Activity</h3>
+            <p class="card-description">Latest operations and generations</p>
+        </div>
+        <div class="card-content">
+            <div class="recent-activity-list" id="recent-activity-list">
+                <div class="activity-item">
+                    <div class="activity-icon">⏳</div>
+                    <div class="activity-content">
+                        <div class="activity-title">No recent activity</div>
+                        <div class="activity-time">Start by creating your first voice or generating speech</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <a href="/settings" class="btn btn-outline btn-sm">View All Activity</a>
+        </div>
+    </div>
+
+    <!-- Resource Usage Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Resource Usage</h3>
+            <p class="card-description">System performance metrics</p>
+        </div>
+        <div class="card-content">
+            <div class="resource-metrics">
+                <div class="metric-item">
+                    <div class="metric-label">CPU Usage</div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" id="cpu-bar" style="width: 0%"></div>
+                    </div>
+                    <div class="metric-value" id="cpu-value">0%</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Memory Usage</div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" id="memory-bar" style="width: 0%"></div>
+                    </div>
+                    <div class="metric-value" id="memory-value">0%</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Storage Used</div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" id="storage-bar" style="width: 0%"></div>
+                    </div>
+                    <div class="metric-value" id="storage-value">0 MB</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Overview -->
+<div class="card" style="margin-top: var(--spacing-xl);">
+    <div class="card-header">
+        <h3 class="card-title">Statistics Overview</h3>
+        <p class="card-description">Usage statistics and performance metrics</p>
+    </div>
+    <div class="card-content">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-value" id="total-voices">0</div>
+                <div class="stat-label">Total Voices</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="total-generations">0</div>
+                <div class="stat-label">Total Generations</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="total-projects">0</div>
+                <div class="stat-label">Active Projects</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="total-hours">0</div>
+                <div class="stat-label">Audio Hours Generated</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize dashboard data
+        loadDashboardData();
+
+        // Update data every 30 seconds
+        setInterval(loadDashboardData, 30000);
+    });
+
+    async function loadDashboardData() {
+        try {
+            // Load system status
+            await loadSystemStatus();
+
+            // Load recent activity
+            await loadRecentActivity();
+
+            // Load resource usage
+            await loadResourceUsage();
+
+            // Load statistics
+            await loadStatistics();
+
+        } catch (error) {
+            console.error('Failed to load dashboard data:', error);
+        }
+    }
+
+    async function loadSystemStatus() {
+        try {
+            // Check backend health
+            const healthResponse = await fetch('/api/health');
+            const backendStatus = healthResponse.ok ? 'Connected' : 'Disconnected';
+            const backendIndicator = document.getElementById('backend-status-indicator');
+            const backendText = document.getElementById('backend-status-text');
+
+            backendIndicator.className = `status-indicator ${healthResponse.ok ? 'connected' : 'error'}`;
+            backendText.textContent = backendStatus;
+
+            // Load voices count
+            const voicesResponse = await fetch('/api/voices');
+            if (voicesResponse.ok) {
+                const voices = await voicesResponse.json();
+                document.getElementById('voices-status').textContent = voices.length;
+                document.getElementById('total-voices').textContent = voices.length;
+            }
+
+        } catch (error) {
+            console.error('Failed to load system status:', error);
+        }
+    }
+
+    async function loadRecentActivity() {
+        // Placeholder for recent activity - would integrate with backend API
+        const activityList = document.getElementById('recent-activity-list');
+        // This would be populated from actual API calls
+    }
+
+    async function loadResourceUsage() {
+        // Placeholder for resource usage - would integrate with system monitoring
+        // Simulate some data for demo
+        document.getElementById('cpu-bar').style.width = '25%';
+        document.getElementById('cpu-value').textContent = '25%';
+
+        document.getElementById('memory-bar').style.width = '45%';
+        document.getElementById('memory-value').textContent = '45%';
+
+        document.getElementById('storage-bar').style.width = '15%';
+        document.getElementById('storage-value').textContent = '1.2 GB';
+    }
+
+    async function loadStatistics() {
+        // Placeholder for statistics - would integrate with backend API
+        document.getElementById('total-generations').textContent = '0';
+        document.getElementById('total-projects').textContent = '0';
+        document.getElementById('total-hours').textContent = '0.0';
+    }
+</script>
+{% endblock %}

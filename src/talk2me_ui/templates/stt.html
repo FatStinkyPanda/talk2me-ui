@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+
+{% block title %}Speech-to-Text - Talk2Me UI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Speech-to-Text</h1>
+    <p class="page-description">Convert audio recordings to text using advanced speech recognition.</p>
+</div>
+
+<div class="grid grid-2">
+    <!-- Real-time Recording Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Real-time Recording</h3>
+            <p class="card-description">Record audio directly from your microphone</p>
+        </div>
+        <div class="card-content">
+            <div class="recording-interface">
+                <button id="record-button" class="record-button stopped">
+                    <span>🎤</span>
+                    <span>Start Recording</span>
+                </button>
+                <div id="record-status" class="record-status">
+                    Click to start recording
+                </div>
+            </div>
+
+            <div class="recording-controls" style="margin-top: var(--spacing-lg);">
+                <div class="form-group">
+                    <label for="wake-word" class="form-label">Wake Word (Optional)</label>
+                    <input type="text" id="wake-word" class="form-input" placeholder="e.g., Hey Assistant"
+                        value="hey assistant">
+                    <div class="form-help">Say this word to start recording automatically</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="continuous-mode" checked> Continuous Mode
+                    </label>
+                    <div class="form-help">Keep recording until manually stopped</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Upload Card -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">File Upload</h3>
+            <p class="card-description">Transcribe audio from existing files</p>
+        </div>
+        <div class="card-content">
+            <form id="upload-form" data-action="/api/stt/upload">
+                <div class="form-group">
+                    <label class="form-label">Audio File</label>
+                    <div class="file-upload">
+                        <div class="file-upload-icon">📁</div>
+                        <div class="file-upload-text">Choose audio file or drag it here</div>
+                        <div class="file-upload-hint">WAV, MP3, M4A, FLAC supported</div>
+                        <input type="file" name="audio_file" class="file-input" accept="audio/*" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="upload-language" class="form-label">Language</label>
+                    <select id="upload-language" name="language" class="form-select">
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="it">Italian</option>
+                        <option value="pt">Portuguese</option>
+                        <option value="ru">Russian</option>
+                        <option value="ja">Japanese</option>
+                        <option value="ko">Korean</option>
+                        <option value="zh">Chinese</option>
+                    </select>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Transcribe File</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Transcription Results -->
+<div class="card" style="margin-top: var(--spacing-xl);">
+    <div class="card-header">
+        <h3 class="card-title">Transcription Results</h3>
+        <p class="card-description">Real-time and file transcription output</p>
+    </div>
+    <div class="card-content">
+        <div class="transcription-container">
+            <div class="transcription-output" id="transcription-output">
+                <div class="empty-state">
+                    <div class="empty-icon">📝</div>
+                    <div class="empty-title">No transcription yet</div>
+                    <div class="empty-description">Start recording or upload a file to see transcription results</div>
+                </div>
+            </div>
+
+            <div class="transcription-actions" id="transcription-actions" style="display: none;">
+                <button class="btn btn-secondary" onclick="copyTranscription()">
+                    <span>📋</span> Copy Text
+                </button>
+                <button class="btn btn-secondary" onclick="downloadTranscription()">
+                    <span>💾</span> Download TXT
+                </button>
+                <button class="btn btn-outline" onclick="clearTranscription()">
+                    <span>🗑️</span> Clear
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Supported Formats Info -->
+<div class="card" style="margin-top: var(--spacing-xl);">
+    <div class="card-header">
+        <h3 class="card-title">Supported Audio Formats</h3>
+        <p class="card-description">File formats and specifications for best results</p>
+    </div>
+    <div class="card-content">
+        <div class="formats-grid">
+            <div class="format-item">
+                <div class="format-name">WAV</div>
+                <div class="format-details">16-bit PCM, mono, 16kHz recommended</div>
+            </div>
+            <div class="format-item">
+                <div class="format-name">MP3</div>
+                <div class="format-details">128kbps or higher, any sample rate</div>
+            </div>
+            <div class="format-item">
+                <div class="format-name">M4A/AAC</div>
+                <div class="format-details">AAC encoded, 44.1kHz preferred</div>
+            </div>
+            <div class="format-item">
+                <div class="format-name">FLAC</div>
+                <div class="format-details">Lossless, any sample rate supported</div>
+            </div>
+        </div>
+
+        <div class="format-notes" style="margin-top: var(--spacing-lg);">
+            <h4>Best Practices:</h4>
+            <ul>
+                <li>Use clear, noise-free recordings for best accuracy</li>
+                <li>Speak at a normal pace and volume</li>
+                <li>Minimize background noise and echo</li>
+                <li>Use a quality microphone when possible</li>
+                <li>Files up to 100MB are supported</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize recording functionality
+        initializeRecording();
+
+        // Initialize file upload form
+        initializeUploadForm();
+
+        // Initialize wake word detection
+        initializeWakeWord();
+    });
+
+    function initializeRecording() {
+        // Recording functionality is handled in app.js
+        // Additional STT-specific logic can go here
+    }
+
+    function initializeUploadForm() {
+        const form = document.getElementById('upload-form');
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(form);
+            const file = formData.get('audio_file');
+
+            if (!file || file.size === 0) {
+                window.Talk2MeUI.showError('Please select an audio file');
+                return;
+            }
+
+            window.Talk2MeUI.showProgressModal('Uploading audio file...');
+
+            try {
+                // Start transcription task
+                const response = await fetch('/api/stt', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Upload failed');
+                }
+
+                const { task_id } = await response.json();
+
+                // Poll for completion
+                await pollTranscriptionTask(task_id, 'file');
+
+            } catch (error) {
+                window.Talk2MeUI.showError('Transcription failed: ' + error.message);
+                window.Talk2MeUI.closeProgressModal();
+            }
+        });
+    }
+
+    function initializeWakeWord() {
+        const wakeWordInput = document.getElementById('wake-word');
+        const continuousMode = document.getElementById('continuous-mode');
+
+        // Wake word detection would be implemented here
+        // This is a placeholder for the actual wake word functionality
+    }
+
+    function displayTranscription(text, source = 'recording') {
+        const output = document.getElementById('transcription-output');
+        const actions = document.getElementById('transcription-actions');
+
+        const timestamp = new Date().toLocaleString();
+        const sourceLabel = source === 'recording' ? 'Real-time Recording' : 'File Upload';
+
+        output.innerHTML = `
+        <div class="transcription-result">
+            <div class="transcription-header">
+                <div class="transcription-source">${sourceLabel}</div>
+                <div class="transcription-time">${timestamp}</div>
+            </div>
+            <div class="transcription-text">${escapeHtml(text)}</div>
+        </div>
+    `;
+
+        actions.style.display = 'flex';
+
+        // Store the current transcription for copy/download
+        window.currentTranscription = text;
+    }
+
+    function copyTranscription() {
+        if (!window.currentTranscription) {
+            window.Talk2MeUI.showError('No transcription to copy');
+            return;
+        }
+
+        navigator.clipboard.writeText(window.currentTranscription).then(() => {
+            window.Talk2MeUI.showSuccess('Transcription copied to clipboard');
+        }).catch(() => {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = window.currentTranscription;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            window.Talk2MeUI.showSuccess('Transcription copied to clipboard');
+        });
+    }
+
+    function downloadTranscription() {
+        if (!window.currentTranscription) {
+            showError('No transcription to download');
+            return;
+        }
+
+        const blob = new Blob([window.currentTranscription], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `transcription_${Date.now()}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function clearTranscription() {
+        const output = document.getElementById('transcription-output');
+        const actions = document.getElementById('transcription-actions');
+
+        output.innerHTML = `
+        <div class="empty-state">
+            <div class="empty-icon">📝</div>
+            <div class="empty-title">No transcription yet</div>
+            <div class="empty-description">Start recording or upload a file to see transcription results</div>
+        </div>
+    `;
+
+        actions.style.display = 'none';
+        window.currentTranscription = null;
+    }
+
+    // Override the recording complete handler for STT
+    window.handleRecordingComplete = function (audioBlob) {
+        // For STT, we want to transcribe the recording
+        transcribeRecording(audioBlob);
+    };
+
+    async function transcribeRecording(audioBlob) {
+        window.Talk2MeUI.showProgressModal('Uploading recording...');
+
+        try {
+            const formData = new FormData();
+            formData.append('audio_file', audioBlob, 'recording.wav');
+
+            // Start transcription task
+            const response = await fetch('/api/stt', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Upload failed');
+            }
+
+            const { task_id } = await response.json();
+
+            // Poll for completion
+            await pollTranscriptionTask(task_id, 'recording');
+
+        } catch (error) {
+            window.Talk2MeUI.showError('Transcription failed: ' + error.message);
+            window.Talk2MeUI.closeProgressModal();
+        }
+    }
+
+    async function pollTranscriptionTask(taskId, source) {
+        const maxPolls = 60; // 60 seconds max
+        let pollCount = 0;
+
+        const poll = async () => {
+            try {
+                const response = await fetch(`/api/stt/${taskId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to check task status');
+                }
+
+                const task = await response.json();
+
+                if (task.status === 'completed') {
+                    window.Talk2MeUI.updateProgress(100, 'Transcription complete!');
+                    setTimeout(() => {
+                        window.Talk2MeUI.closeProgressModal();
+                        displayTranscription(task.result.text, source);
+                    }, 500);
+                    return;
+                } else if (task.status === 'failed') {
+                    throw new Error(task.error || 'Transcription failed');
+                } else if (task.status === 'processing') {
+                    // Update progress based on poll count
+                    const progress = Math.min(90, 10 + (pollCount * 1.5));
+                    window.Talk2MeUI.updateProgress(progress, 'Transcribing audio...');
+                }
+
+                pollCount++;
+                if (pollCount >= maxPolls) {
+                    throw new Error('Transcription timed out');
+                }
+
+                // Poll again in 1 second
+                setTimeout(poll, 1000);
+
+            } catch (error) {
+                window.Talk2MeUI.closeProgressModal();
+                window.Talk2MeUI.showError('Transcription failed: ' + error.message);
+            }
+        };
+
+        // Start polling
+        poll();
+    }
+
+    // Utility function for HTML escaping
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}

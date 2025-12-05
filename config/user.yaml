@@ -1,0 +1,10 @@
+# User configuration overrides
+
+backend:
+  url: "http://192.168.1.100:9000"
+
+audio:
+  sample_rate: 22050
+
+ui:
+  port: 3000
