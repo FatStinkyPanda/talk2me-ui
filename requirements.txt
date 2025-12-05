@@ -1,0 +1,15 @@
+-e fastapi
+uvicorn
+requests
+pydantic
+pyyaml
+python-multipart
+jinja2
+aiofiles
+websockets
+pydub
+# Testing dependencies
+pytest
+pytest-cov
+pytest-asyncio
+httpx
