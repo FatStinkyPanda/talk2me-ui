@@ -9,8 +9,73 @@ let isRecording = false;
 let mediaRecorder = null;
 let audioChunks = [];
 
+// Touch interaction state
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
+
+// CSRF token management
+function getCsrfToken() {
+  const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+  return tokenMeta ? tokenMeta.getAttribute("content") : null;
+}
+
+function getCsrfHeaders() {
+  const token = getCsrfToken();
+  if (token) {
+    return { "X-CSRF-Token": token };
+  }
+  return {};
+}
+
+// Initialize i18next
+async function initializeI18n() {
+  await i18next
+    .use(i18nextBrowserLanguageDetector)
+    .use(i18nextHttpBackend)
+    .init({
+      fallbackLng: "en",
+      debug: false,
+      backend: {
+        loadPath: "/static/locales/{{lng}}/common.json",
+      },
+      detection: {
+        order: ["localStorage", "navigator", "htmlTag"],
+        caches: ["localStorage"],
+      },
+      interpolation: {
+        escapeValue: false, // React already escapes values
+      },
+    });
+
+  // Update page language
+  document.documentElement.lang = i18next.language;
+
+  // Update language selector
+  updateLanguageSelector();
+}
+
+// Language change function
+function changeLanguage(lang) {
+  i18next.changeLanguage(lang).then(() => {
+    document.documentElement.lang = lang;
+    updateLanguageSelector();
+    // Optionally reload the page to get server-side translations
+    // location.reload();
+  });
+}
+
+// Update language selector to match current language
+function updateLanguageSelector() {
+  const selector = document.getElementById("language-select");
+  if (selector) {
+    selector.value = i18next.language;
+  }
+}
+
 // DOM ready
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", async function () {
+  await initializeI18n();
   initializeApp();
 });
 
@@ -33,6 +98,333 @@ function initializeApp() {
 
   // Initialize audio players
   initializeAudioPlayers();
+
+  // Initialize touch interactions
+  initializeTouchInteractions();
+
+  // Initialize PWA features
+  initializePWA();
+}
+
+/**
+ * Touch Interaction Management
+ */
+function initializeTouchInteractions() {
+  // Add touch feedback to interactive elements
+  document
+    .querySelectorAll(
+      ".btn, .conversation-button, .record-button, .file-upload, .play-btn",
+    )
+    .forEach((element) => {
+      addTouchFeedback(element);
+    });
+
+  // Add swipe gestures for modals
+  document.querySelectorAll(".modal-content").forEach((modal) => {
+    addSwipeToClose(modal);
+  });
+
+  // Prevent zoom on double-tap for iOS
+  let lastTouchEnd = 0;
+  document.addEventListener(
+    "touchend",
+    (event) => {
+      const now = Date.now();
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+      }
+      lastTouchEnd = now;
+    },
+    false,
+  );
+
+  // Prevent context menu on long press
+  document.addEventListener("contextmenu", (event) => {
+    if (event.target.closest(".btn, .conversation-button, .record-button")) {
+      event.preventDefault();
+    }
+  });
+}
+
+function addTouchFeedback(element) {
+  let touchStartTime = 0;
+  let hasMoved = false;
+
+  element.addEventListener(
+    "touchstart",
+    (event) => {
+      touchStartTime = Date.now();
+      hasMoved = false;
+      element.classList.add("touch-active");
+
+      // Prevent scrolling when touching buttons
+      if (
+        element.classList.contains("btn") ||
+        element.classList.contains("conversation-button") ||
+        element.classList.contains("record-button")
+      ) {
+        event.preventDefault();
+      }
+    },
+    { passive: false },
+  );
+
+  element.addEventListener("touchmove", () => {
+    hasMoved = true;
+    element.classList.remove("touch-active");
+  });
+
+  element.addEventListener("touchend", (event) => {
+    element.classList.remove("touch-active");
+
+    // Handle long press for additional actions
+    const touchDuration = Date.now() - touchStartTime;
+    if (touchDuration > 500 && !hasMoved) {
+      handleLongPress(element, event);
+    }
+  });
+
+  // Add mouse feedback for desktop testing
+  element.addEventListener("mousedown", () => {
+    element.classList.add("touch-active");
+  });
+
+  element.addEventListener("mouseup", () => {
+    element.classList.remove("touch-active");
+  });
+
+  element.addEventListener("mouseleave", () => {
+    element.classList.remove("touch-active");
+  });
+}
+
+function addSwipeToClose(modal) {
+  let startX = 0;
+  let startY = 0;
+  let isTracking = false;
+
+  modal.addEventListener(
+    "touchstart",
+    (event) => {
+      startX = event.touches[0].clientX;
+      startY = event.touches[0].clientY;
+      isTracking = true;
+    },
+    { passive: true },
+  );
+
+  modal.addEventListener(
+    "touchmove",
+    (event) => {
+      if (!isTracking) return;
+
+      const currentX = event.touches[0].clientX;
+      const currentY = event.touches[0].clientY;
+      const diffX = currentX - startX;
+      const diffY = currentY - startY;
+
+      // Only handle vertical swipes (down to close)
+      if (Math.abs(diffY) > Math.abs(diffX) && diffY > 50) {
+        modal.style.transform = `translateY(${diffY}px)`;
+        modal.style.opacity = Math.max(0, 1 - Math.abs(diffY) / 200);
+      }
+    },
+    { passive: true },
+  );
+
+  modal.addEventListener(
+    "touchend",
+    (event) => {
+      if (!isTracking) return;
+
+      const currentY = event.changedTouches[0].clientY;
+      const diffY = currentY - startY;
+
+      isTracking = false;
+
+      // Close modal if swiped down enough
+      if (diffY > 100) {
+        const modalElement = modal.closest(".modal");
+        if (modalElement) {
+          modalElement.classList.remove("show");
+        }
+      }
+
+      // Reset transform
+      modal.style.transform = "";
+      modal.style.opacity = "";
+    },
+    { passive: true },
+  );
+}
+
+function handleLongPress(element, event) {
+  // Add haptic feedback if available
+  if (navigator.vibrate) {
+    navigator.vibrate(50);
+  }
+
+  // Show additional options for long press (future enhancement)
+  if (element.classList.contains("conversation-button")) {
+    showQuickActions(element, event);
+  }
+}
+
+function showQuickActions(button, event) {
+  // Create quick action menu for conversation buttons
+  const actions = ["Start Conversation", "View History", "Settings"];
+  const menu = document.createElement("div");
+  menu.className = "quick-actions-menu";
+  menu.style.cssText = `
+    position: absolute;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    padding: 8px 0;
+    min-width: 150px;
+  `;
+
+  actions.forEach((action) => {
+    const item = document.createElement("div");
+    item.textContent = action;
+    item.style.cssText = `
+      padding: 12px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #374151;
+    `;
+    item.addEventListener("click", () => {
+      console.log("Quick action:", action);
+      document.body.removeChild(menu);
+    });
+    item.addEventListener("mouseenter", () => {
+      item.style.backgroundColor = "#f3f4f6";
+    });
+    item.addEventListener("mouseleave", () => {
+      item.style.backgroundColor = "";
+    });
+    menu.appendChild(item);
+  });
+
+  document.body.appendChild(menu);
+
+  // Position menu
+  const rect = button.getBoundingClientRect();
+  menu.style.left = rect.left + "px";
+  menu.style.top = rect.bottom + 8 + "px";
+
+  // Remove menu when clicking elsewhere
+  const removeMenu = (e) => {
+    if (!menu.contains(e.target)) {
+      document.body.removeChild(menu);
+      document.removeEventListener("click", removeMenu);
+    }
+  };
+  setTimeout(() => document.addEventListener("click", removeMenu), 100);
+}
+
+/**
+ * PWA Management
+ */
+function initializePWA() {
+  // Register service worker
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker
+        .register("/static/service-worker.js")
+        .then((registration) => {
+          console.log("SW registered: ", registration);
+        })
+        .catch((registrationError) => {
+          console.log("SW registration failed: ", registrationError);
+        });
+    });
+  }
+
+  // Handle PWA install prompt
+  let deferredPrompt;
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    showInstallPrompt();
+  });
+
+  // Handle successful installation
+  window.addEventListener("appinstalled", () => {
+    console.log("PWA was installed");
+    hideInstallPrompt();
+  });
+
+  // Handle online/offline status
+  window.addEventListener("online", () => {
+    hideOfflineIndicator();
+    showSuccess("Back online");
+    checkBackendStatus();
+  });
+
+  window.addEventListener("offline", () => {
+    showOfflineIndicator();
+    showError("You are offline. Some features may not be available.");
+  });
+
+  // Show offline indicator if already offline
+  if (!navigator.onLine) {
+    showOfflineIndicator();
+  }
+}
+
+function showInstallPrompt() {
+  const installButton = document.createElement("button");
+  installButton.className = "btn btn-primary install-prompt";
+  installButton.innerHTML = "<span>📱</span><span>Install App</span>";
+  installButton.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  `;
+
+  installButton.addEventListener("click", () => {
+    hideInstallPrompt();
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === "accepted") {
+          console.log("User accepted the install prompt");
+        }
+        deferredPrompt = null;
+      });
+    }
+  });
+
+  document.body.appendChild(installButton);
+
+  // Auto-hide after 10 seconds
+  setTimeout(() => hideInstallPrompt(), 10000);
+}
+
+function hideInstallPrompt() {
+  const prompt = document.querySelector(".install-prompt");
+  if (prompt) {
+    prompt.remove();
+  }
+}
+
+function showOfflineIndicator() {
+  hideOfflineIndicator(); // Remove existing
+  const indicator = document.createElement("div");
+  indicator.className = "offline-indicator";
+  indicator.innerHTML = "<span>⚠️</span><span>Offline Mode</span>";
+  document.body.appendChild(indicator);
+}
+
+function hideOfflineIndicator() {
+  const indicator = document.querySelector(".offline-indicator");
+  if (indicator) {
+    indicator.remove();
+  }
 }
 
 /**
@@ -49,19 +441,19 @@ async function checkBackendStatus() {
       method: "GET",
       headers: {
         Accept: "application/json",
+        ...getCsrfHeaders(),
       },
     });
 
     if (response.ok) {
       statusIndicator.className = "status-indicator connected";
-      statusText.textContent = "Connected";
+      statusText.textContent = i18next.t("status.connected");
     } else {
       throw new Error(`HTTP ${response.status}`);
     }
-  } catch (error) {
+  } catch {
     statusIndicator.className = "status-indicator error";
-    statusText.textContent = "Disconnected";
-    console.warn("Backend status check failed:", error);
+    statusText.textContent = i18next.t("status.disconnected");
   }
 }
 
@@ -69,24 +461,20 @@ async function checkBackendStatus() {
  * Sidebar Data Management
  */
 async function updateSidebarData() {
-  try {
-    // Update voice count
-    const voiceResponse = await fetch("/api/voices");
-    if (voiceResponse.ok) {
-      const data = await voiceResponse.json();
-      document.getElementById("voice-count").textContent = (
-        data.voices || []
-      ).length;
-    }
-
-    // Update project count (placeholder)
-    document.getElementById("project-count").textContent = "0";
-
-    // Update storage usage (placeholder)
-    document.getElementById("storage-usage").textContent = "0 MB";
-  } catch (error) {
-    console.warn("Failed to update sidebar data:", error);
+  // Update voice count
+  const voiceResponse = await fetch("/api/voices");
+  if (voiceResponse.ok) {
+    const data = await voiceResponse.json();
+    document.getElementById("voice-count").textContent = (
+      data.voices || []
+    ).length;
   }
+
+  // Update project count (placeholder)
+  document.getElementById("project-count").textContent = "0";
+
+  // Update storage usage (placeholder)
+  document.getElementById("storage-usage").textContent = "0 MB";
 }
 
 /**
@@ -110,7 +498,7 @@ async function handleFormSubmit(event) {
 
   const form = event.target;
   const formData = new FormData(form);
-  let action = form.getAttribute("data-action") || form.action;
+  const action = form.getAttribute("data-action") || form.action;
   const method = form.getAttribute("data-method") || form.method || "POST";
 
   if (!action) {
@@ -141,6 +529,7 @@ async function handleFormSubmit(event) {
       body: formData,
       headers: {
         Accept: "application/json",
+        ...getCsrfHeaders(),
       },
     });
 
@@ -311,6 +700,13 @@ async function handleFileUploadForm(form, formData, action, method) {
 
     xhr.open(method, action);
     xhr.setRequestHeader("Accept", "application/json");
+
+    // Add CSRF token header
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      xhr.setRequestHeader("X-CSRF-Token", csrfToken);
+    }
+
     xhr.send(formData);
   });
 }
@@ -355,7 +751,7 @@ async function validateVoiceSamples(files) {
           message: `Audio duration must be between 5-30 seconds. File "${file.name}" is ${duration.toFixed(1)} seconds`,
         };
       }
-    } catch (error) {
+    } catch {
       return {
         valid: false,
         message: `Could not validate audio file "${file.name}". Please ensure it's a valid WAV file`,
@@ -431,7 +827,7 @@ function handleFileDrop(event) {
   if (input && files.length > 0) {
     // Update input files
     const dt = new DataTransfer();
-    for (let file of files) {
+    for (const file of files) {
       dt.items.add(file);
     }
     input.files = dt.files;
@@ -498,7 +894,7 @@ async function startRecording() {
     isRecording = true;
 
     updateRecordingUI(true);
-    showSuccess("Recording started");
+    showSuccess(i18next.t("recording.recordingStarted"));
   } catch (error) {
     showError("Failed to start recording: " + error.message);
   }
@@ -509,7 +905,7 @@ function stopRecording() {
     mediaRecorder.stop();
     isRecording = false;
     updateRecordingUI(false);
-    showSuccess("Recording stopped");
+    showSuccess(i18next.t("recording.recordingStopped"));
   }
 }
 
@@ -522,13 +918,13 @@ function updateRecordingUI(recording) {
   if (recording) {
     recordButton.classList.add("recording");
     recordButton.classList.remove("stopped");
-    recordButton.innerHTML = "<span>⏹️</span><span>Stop</span>";
-    recordStatus.textContent = "Recording...";
+    recordButton.innerHTML = `<span>⏹️</span><span>${i18next.t("recording.stopRecording")}</span>`;
+    recordStatus.textContent = i18next.t("recording.recordingStarted");
   } else {
     recordButton.classList.remove("recording");
     recordButton.classList.add("stopped");
-    recordButton.innerHTML = "<span>🎤</span><span>Record</span>";
-    recordStatus.textContent = "Click to start recording";
+    recordButton.innerHTML = `<span>🎤</span><span>${i18next.t("recording.startRecording")}</span>`;
+    recordStatus.textContent = i18next.t("recording.clickToStartRecording");
   }
 }
 
@@ -553,7 +949,6 @@ function initializeAudioPlayers() {
 
 function initializeAudioPlayer(playerElement) {
   const playBtn = playerElement.querySelector(".play-btn");
-  const waveform = playerElement.querySelector(".audio-waveform");
   const duration = playerElement.querySelector(".audio-duration");
   const audio = playerElement.querySelector("audio");
 
@@ -659,6 +1054,12 @@ function showError(message, details = "") {
   }
 
   modal.classList.add("show");
+
+  // Update modal title
+  const titleElement = modal.querySelector("h3");
+  if (titleElement) {
+    titleElement.textContent = i18next.t("modals.error");
+  }
 }
 
 function closeErrorModal() {
@@ -679,6 +1080,12 @@ function showSuccess(message) {
 
   messageElement.textContent = message;
   modal.classList.add("show");
+
+  // Update modal title
+  const titleElement = modal.querySelector("h3");
+  if (titleElement) {
+    titleElement.textContent = i18next.t("modals.success");
+  }
 
   // Auto-close after 3 seconds
   setTimeout(() => {
@@ -727,12 +1134,6 @@ function formatFileSize(bytes) {
   const sizes = ["Bytes", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-}
-
-function escapeHtml(text) {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
 }
 
 function closeEditModal() {

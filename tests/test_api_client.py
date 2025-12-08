@@ -1,6 +1,4 @@
-"""
-Unit and integration tests for API client functionality.
-"""
+"""Unit and integration tests for API client functionality."""
 
 from io import BytesIO
 from unittest.mock import Mock, patch
@@ -69,6 +67,17 @@ class TestTalk2MeAPIClient:
         """Test request failure."""
         with patch.object(client.session, "request") as mock_request:
             mock_request.side_effect = RequestException("Network error")
+
+            with pytest.raises(RequestException, match="API request failed"):
+                client._make_request("GET", "/test")
+
+    def test_make_request_http_error(self, client):
+        """Test HTTP error response."""
+        mock_response = Mock()
+        mock_response.raise_for_status.side_effect = RequestException("404 Client Error")
+
+        with patch.object(client.session, "request") as mock_request:
+            mock_request.return_value = mock_response
 
             with pytest.raises(RequestException, match="API request failed"):
                 client._make_request("GET", "/test")
@@ -263,7 +272,7 @@ class TestTalk2MeAPIClient:
 
             assert result == {"cloned_voice_id": "voice456"}
             mock_make_request.assert_called_once_with(
-                "POST", "/voices/voice123/samples", files={"samples": samples[0]}
+                "POST", "/voices/voice123/samples", files=[("samples", samples[0])]
             )
 
     def test_clone_voice_empty_id(self, client):
@@ -275,6 +284,74 @@ class TestTalk2MeAPIClient:
         """Test cloning voice without samples."""
         with pytest.raises(ValueError, match="At least one sample file is required"):
             client.clone_voice("voice123", [])
+
+    def test_update_voice(self, client, mock_response):
+        """Test updating a voice."""
+        with (
+            patch.object(client, "_make_request") as mock_make_request,
+            patch.object(client, "_parse_json_response") as mock_parse,
+        ):
+            mock_make_request.return_value = mock_response
+            mock_parse.return_value = {"updated": True}
+
+            result = client.update_voice("voice123", name="New Name", language="es")
+
+            assert result == {"updated": True}
+            mock_make_request.assert_called_once_with(
+                "PUT", "/voices/voice123", json={"name": "New Name", "language": "es"}
+            )
+
+    def test_update_voice_partial_update(self, client, mock_response):
+        """Test updating voice with only name."""
+        with (
+            patch.object(client, "_make_request") as mock_make_request,
+            patch.object(client, "_parse_json_response") as mock_parse,
+        ):
+            mock_make_request.return_value = mock_response
+            mock_parse.return_value = {"updated": True}
+
+            result = client.update_voice("voice123", name="New Name")
+
+            assert result == {"updated": True}
+            mock_make_request.assert_called_once_with(
+                "PUT", "/voices/voice123", json={"name": "New Name"}
+            )
+
+    def test_update_voice_empty_id(self, client):
+        """Test updating voice with empty ID."""
+        with pytest.raises(ValueError, match="Voice ID cannot be empty"):
+            client.update_voice("", name="New Name")
+
+    def test_update_voice_no_fields(self, client):
+        """Test updating voice with no fields provided."""
+        with pytest.raises(ValueError, match="At least one field must be provided"):
+            client.update_voice("voice123")
+
+    def test_create_voice_no_samples(self, client, mock_response):
+        """Test creating voice without samples."""
+        with (
+            patch.object(client, "_make_request") as mock_make_request,
+            patch.object(client, "_parse_json_response") as mock_parse,
+        ):
+            mock_make_request.return_value = mock_response
+            mock_parse.return_value = {"voice_id": "voice123"}
+
+            result = client.create_voice("Test Voice", "en")
+
+            assert result == {"voice_id": "voice123"}
+            call_args = mock_make_request.call_args
+            assert call_args[1]["data"] == {"name": "Test Voice", "language": "en"}
+            assert "files" not in call_args[1] or call_args[1]["files"] == []
+
+    def test_tts_synthesize_async_empty_text(self, client):
+        """Test async TTS with empty text."""
+        with pytest.raises(ValueError, match="Text cannot be empty"):
+            client.tts_synthesize_async("", "voice1")
+
+    def test_tts_synthesize_async_whitespace_text(self, client):
+        """Test async TTS with whitespace-only text."""
+        with pytest.raises(ValueError, match="Text cannot be empty"):
+            client.tts_synthesize_async("   ", "voice1")
 
     def test_generate_audiobook(self, client, mock_response):
         """Test audiobook generation."""

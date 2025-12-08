@@ -1,6 +1,4 @@
-"""
-Unit tests for markup parser functionality.
-"""
+"""Unit tests for markup parser functionality."""
 
 import pytest
 
@@ -21,13 +19,13 @@ class TestMarkupSection:
         section = MarkupSection(
             text="Hello world",
             voice="voice1",
-            sound_effects=["effect1"],
+            sound_effects=[{"id": "effect1"}],
             background_audio={"name": "bg1", "volume": 0.5},
         )
 
         assert section.text == "Hello world"
         assert section.voice == "voice1"
-        assert section.sound_effects == ["effect1"]
+        assert section.sound_effects == [{"id": "effect1"}]
         assert section.background_audio == {"name": "bg1", "volume": 0.5}
 
     def test_markup_section_defaults(self):
@@ -112,8 +110,8 @@ class TestAudiobookMarkupParser:
 
         assert len(result) == 1
         assert result[0].text == "Someone knocked"
-        # Sound effects are handled in parse method, not stored in section
-        assert result[0].sound_effects == []
+        # Sound effects are stored in the section
+        assert result[0].sound_effects == [{"id": "door_knock"}]
 
     def test_parse_complex_markup(self, parser):
         """Test parsing complex markup with multiple elements."""
@@ -149,6 +147,29 @@ class TestAudiobookMarkupParser:
 
         with pytest.raises(AudiobookMarkupError, match="Invalid markup format"):
             parser.parse(text)
+
+    def test_parse_markup_invalid_command_directly(self, parser):
+        """Test _parse_markup with invalid command directly."""
+        with pytest.raises(AudiobookMarkupError, match="Unknown markup command: invalid"):
+            parser._parse_markup("invalid:command")
+
+    def test_parse_markup_malformed_directly(self, parser):
+        """Test _parse_markup with malformed markup directly."""
+        with pytest.raises(AudiobookMarkupError, match="Invalid markup format"):
+            parser._parse_markup("voice")  # No colon
+
+    def test_parse_options_with_non_numeric(self, parser):
+        """Test parsing options with non-numeric values."""
+        text = "{{{bg:music,loop:true,speed:fast}}}Text"
+        result = parser.parse(text)
+
+        assert result[0].background_audio == {"name": "music", "loop": "true", "speed": "fast"}
+
+    def test_audiobook_markup_error_inheritance(self):
+        """Test AudiobookMarkupError inheritance."""
+        error = AudiobookMarkupError("test message")
+        assert isinstance(error, Exception)
+        assert str(error) == "test message"
 
     def test_parse_unmatched_braces(self, parser):
         """Test parsing with unmatched braces."""
@@ -276,6 +297,7 @@ class TestEdgeCases:
         text = "{{{bg:music,vol:0.5,fade:1.0,loop:true,duck:0.2}}}Text"
         result = parse_audiobook_markup(text)
         bg = result[0].background_audio
+        assert bg is not None
         assert bg["name"] == "music"
         assert bg["vol"] == 0.5
         assert bg["fade"] == 1.0

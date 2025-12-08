@@ -1,0 +1,30 @@
+{
+    "status": {
+        "connected": "Conectado",
+        "disconnected": "Desconectado"
+    },
+    "recording": {
+        "recordingStarted": "Grabación iniciada",
+        "recordingStopped": "Grabación detenida",
+        "startRecording": "Grabar",
+        "stopRecording": "Detener",
+        "clickToStartRecording": "Haz clic para comenzar a grabar"
+    },
+    "modals": {
+        "error": "Error",
+        "success": "Éxito",
+        "progress": "Progreso"
+    },
+    "actions": {
+        "submit": "Enviar",
+        "cancel": "Cancelar",
+        "close": "Cerrar",
+        "ok": "Aceptar",
+        "save": "Guardar",
+        "delete": "Eliminar",
+        "edit": "Editar",
+        "create": "Crear",
+        "upload": "Subir",
+        "download": "Descargar"
+    }
+}

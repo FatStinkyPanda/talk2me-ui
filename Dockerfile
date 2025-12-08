@@ -1,5 +1,5 @@
-# Use Python 3.11 slim image as base
-FROM python:3.11-slim
+# Use Python 3.11.10 slim image as base
+FROM python:3.11.10-slim
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -11,8 +11,9 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential=12.9 \
+    curl=7.88.1-10+deb12u7 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

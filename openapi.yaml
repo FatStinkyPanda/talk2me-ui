@@ -1,0 +1,1512 @@
+openapi: 3.0.3
+info:
+  title: Talk2Me UI API
+  description: |
+    Web interface API for Talk2Me speech processing services.
+
+    This API provides endpoints for speech-to-text (STT), text-to-speech (TTS),
+    voice cloning, audiobook generation, sound effects management, and real-time
+    conversation through WebSocket connections.
+
+    ## Authentication
+
+    Most endpoints require user authentication via session cookies. Authentication
+    is handled through the `/auth/*` endpoints which set secure HTTP-only cookies.
+
+    ## Task-based Processing
+
+    Audio processing endpoints (STT, TTS, Audiobooks) use asynchronous task processing.
+    Clients submit processing requests and receive task IDs, then poll for completion
+    status before downloading results.
+
+    ## File Uploads
+
+    Audio file uploads support multiple formats: WAV, MP3, OGG, FLAC, AAC, M4A.
+    Maximum file size is 50MB per upload.
+
+    ## WebSocket Real-time Conversation
+
+    The `/ws/conversation` endpoint provides real-time bidirectional audio streaming
+    with wake word detection and automatic STT/TTS processing.
+  version: 1.0.0
+  contact:
+    name: Talk2Me Support
+    email: support@talk2me.local
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: https://talk2me.example.com
+    description: Production server
+
+security:
+  - sessionAuth: []
+  - csrfToken: []
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session_id
+      description: Session cookie set by authentication endpoints
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: CSRF protection token for state-changing operations
+
+  schemas:
+    # Common schemas
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error details
+      required:
+        - error
+        - message
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy]
+          example: healthy
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        version:
+          type: string
+          example: "1.0.0"
+        service:
+          type: string
+          example: "talk2me-ui"
+      required:
+        - status
+        - timestamp
+        - version
+        - service
+
+    TaskResponse:
+      type: object
+      properties:
+        task_id:
+          type: string
+          format: uuid
+          description: Unique task identifier for tracking progress
+          example: "123e4567-e89b-12d3-a456-426614174000"
+      required:
+        - task_id
+
+    TaskStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [processing, completed, failed]
+          description: Current task status
+          example: completed
+        result:
+          type: object
+          description: Task result (present when status is 'completed')
+        error:
+          type: string
+          description: Error message (present when status is 'failed')
+      required:
+        - status
+
+    # STT schemas
+    STTResult:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Transcribed text content
+          example: "Hello, how can I help you today?"
+      required:
+        - text
+
+    # TTS schemas
+    TTSRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 5000
+          description: Text to synthesize into speech
+          example: "Hello world, this is a test of the text-to-speech system."
+        voice_id:
+          type: string
+          description: Voice identifier to use for synthesis
+          example: "default"
+        speed:
+          type: number
+          minimum: 0.5
+          maximum: 2.0
+          default: 1.0
+          description: Speech speed multiplier (0.5x to 2.0x)
+          example: 1.2
+        pitch:
+          type: integer
+          minimum: -12
+          maximum: 12
+          default: 0
+          description: Pitch adjustment in semitones (-12 to +12)
+          example: 2
+        output_format:
+          type: string
+          enum: [wav, mp3, ogg]
+          default: wav
+          description: Output audio format
+          example: wav
+      required:
+        - text
+        - voice_id
+
+    TTSResult:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [processing, completed, failed]
+        audio_data:
+          type: string
+          description: Base64-encoded audio data (present when completed)
+        filename:
+          type: string
+          description: Generated audio filename
+        text:
+          type: string
+          description: Original text that was synthesized
+        error:
+          type: string
+          description: Error message (present when failed)
+
+    # Voice schemas
+    Voice:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Display name for the voice
+          example: "Default Voice"
+        display_name:
+          type: string
+          description: Display name for the voice
+          example: "Default Voice"
+        language:
+          type: string
+          description: Language code (ISO 639-1)
+          example: "en"
+        voice_id:
+          type: string
+          description: Unique voice identifier
+          example: "default"
+      required:
+        - name
+        - language
+
+    VoiceList:
+      type: object
+      properties:
+        voices:
+          type: array
+          items:
+            $ref: '#/components/schemas/Voice'
+      required:
+        - voices
+
+    VoiceCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Display name for the voice
+          example: "My Custom Voice"
+        language:
+          type: string
+          default: "en"
+          description: Language code for the voice
+          example: "en"
+        samples:
+          type: array
+          items:
+            type: string
+            format: binary
+          description: Audio sample files for voice cloning (WAV format recommended)
+      required:
+        - name
+
+    VoiceUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: New display name
+          example: "Updated Voice Name"
+        language:
+          type: string
+          description: New language code
+          example: "es"
+
+    VoiceCreateResponse:
+      type: object
+      properties:
+        voice_id:
+          type: string
+          description: Generated voice identifier
+          example: "voice_123456"
+        message:
+          type: string
+          example: "Voice created successfully"
+        samples_uploaded:
+          type: integer
+          description: Number of samples uploaded
+          example: 3
+      required:
+        - voice_id
+        - message
+        - samples_uploaded
+
+    # Audiobook schemas
+    AudiobookRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+          description: |
+            Text with triple-brace markup for audiobook generation.
+
+            Supported markup:
+            - `{{{voice:voice_id}}}` - Switch voice
+            - `{{{bg:bg_id}}}` - Add background audio
+            - `{{{sfx:sfx_id}}}` - Add sound effect
+            - `{{{pause:2.5}}}` - Add pause in seconds
+          example: |
+            {{{voice:default}}}
+            Welcome to our audiobook.
+
+            {{{bg:ambient_rain}}}
+            {{{voice:narrator}}}
+            It was a dark and stormy night...
+        output_format:
+          type: string
+          enum: [wav, mp3, ogg]
+          default: wav
+          description: Output audio format
+        sample_rate:
+          type: integer
+          enum: [22050, 44100]
+          default: 22050
+          description: Audio sample rate in Hz
+        normalize:
+          type: boolean
+          default: true
+          description: Whether to normalize audio levels
+        chapter_markers:
+          type: boolean
+          default: true
+          description: Whether to add chapter markers
+      required:
+        - text
+
+    AudiobookResult:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [processing, completed, failed]
+        audio_data:
+          type: string
+          description: Base64-encoded audiobook audio data
+        filename:
+          type: string
+          description: Generated audiobook filename
+        sections_count:
+          type: integer
+          description: Number of sections processed
+        markup_text:
+          type: string
+          description: Original markup text
+        error:
+          type: string
+          description: Error message (present when failed)
+
+    # Sound schemas
+    SoundEffect:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique sound effect identifier
+          example: "thunder_clap"
+        name:
+          type: string
+          description: Display name
+          example: "Thunder Clap"
+        category:
+          type: string
+          description: Category for organization
+          example: "weather"
+        volume:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.8
+          description: Default volume level (0.0 to 1.0)
+        fade_in:
+          type: number
+          minimum: 0.0
+          default: 0.0
+          description: Fade in time in seconds
+        fade_out:
+          type: number
+          minimum: 0.0
+          default: 0.0
+          description: Fade out time in seconds
+        duration:
+          type: number
+          minimum: 0.0
+          description: Maximum duration in seconds (optional)
+        pause_speech:
+          type: boolean
+          default: false
+          description: Whether to pause speech during playback
+        type:
+          type: string
+          enum: [effect]
+          description: Sound type
+        filename:
+          type: string
+          description: Audio filename
+        content_type:
+          type: string
+          description: MIME content type
+        size:
+          type: integer
+          description: File size in bytes
+        uploaded_at:
+          type: string
+          description: Upload timestamp
+      required:
+        - id
+        - name
+        - volume
+        - type
+
+    BackgroundAudio:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique background audio identifier
+          example: "ambient_rain"
+        name:
+          type: string
+          description: Display name
+          example: "Ambient Rain"
+        type:
+          type: string
+          enum: [ambient, music, nature]
+          default: ambient
+          description: Type of background audio
+        volume:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.3
+          description: Default volume level (0.0 to 1.0)
+        fade_in:
+          type: number
+          minimum: 0.0
+          default: 1.0
+          description: Fade in time in seconds
+        fade_out:
+          type: number
+          minimum: 0.0
+          default: 1.0
+          description: Fade out time in seconds
+        duck_level:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.2
+          description: Volume level when ducking speech (0.0 to 1.0)
+        loop:
+          type: boolean
+          default: true
+          description: Whether to loop the audio
+        duck_speech:
+          type: boolean
+          default: true
+          description: Whether to duck speech volume
+        audio_type:
+          type: string
+          enum: [background]
+          description: Audio type
+        filename:
+          type: string
+          description: Audio filename
+        content_type:
+          type: string
+          description: MIME content type
+        size:
+          type: integer
+          description: File size in bytes
+        uploaded_at:
+          type: string
+          description: Upload timestamp
+      required:
+        - id
+        - name
+        - volume
+        - audio_type
+
+    SoundUploadRequest:
+      type: object
+      properties:
+        audio_file:
+          type: string
+          format: binary
+          description: Audio file to upload (WAV, MP3, OGG, FLAC, AAC, M4A)
+        name:
+          type: string
+          description: Display name for the sound
+        sound_id:
+          type: string
+          minLength: 1
+          description: Unique identifier for the sound
+      required:
+        - audio_file
+        - sound_id
+
+    SoundEffectUploadRequest:
+      allOf:
+        - $ref: '#/components/schemas/SoundUploadRequest'
+        - type: object
+          properties:
+            category:
+              type: string
+              description: Category for organization
+              example: "weather"
+            volume:
+              type: number
+              minimum: 0.0
+              maximum: 1.0
+              default: 0.8
+            fade_in:
+              type: number
+              minimum: 0.0
+              default: 0.0
+            fade_out:
+              type: number
+              minimum: 0.0
+              default: 0.0
+            duration:
+              type: number
+              minimum: 0.0
+            pause_speech:
+              type: boolean
+              default: false
+
+    BackgroundAudioUploadRequest:
+      allOf:
+        - $ref: '#/components/schemas/SoundUploadRequest'
+        - type: object
+          properties:
+            sound_type:
+              type: string
+              enum: [ambient, music, nature]
+              default: ambient
+            volume:
+              type: number
+              minimum: 0.0
+              maximum: 1.0
+              default: 0.3
+            fade_in:
+              type: number
+              minimum: 0.0
+              default: 1.0
+            fade_out:
+              type: number
+              minimum: 0.0
+              default: 1.0
+            duck_level:
+              type: number
+              minimum: 0.0
+              maximum: 1.0
+              default: 0.2
+            loop:
+              type: boolean
+              default: true
+            duck_speech:
+              type: boolean
+              default: true
+
+    SoundUploadResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Sound identifier
+        message:
+          type: string
+          example: "Sound uploaded successfully"
+      required:
+        - id
+        - message
+
+    # Authentication schemas
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: User username
+          example: "john_doe"
+        password:
+          type: string
+          minLength: 1
+          description: User password
+          example: "secure_password_123"
+      required:
+        - username
+        - password
+
+    RegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          description: Desired username
+          example: "john_doe"
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "john.doe@example.com"
+        password:
+          type: string
+          minLength: 8
+          description: User password (minimum 8 characters)
+          example: "secure_password_123"
+        confirm_password:
+          type: string
+          description: Password confirmation (must match password)
+          example: "secure_password_123"
+      required:
+        - username
+        - email
+        - password
+        - confirm_password
+
+    AuthResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Success message
+          example: "Login successful"
+      required:
+        - message
+
+paths:
+  # Health and monitoring
+  /api/health:
+    get:
+      summary: Health check
+      description: Check if the API service is healthy and running
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+              example:
+                status: healthy
+                timestamp: "2024-01-15T10:30:00Z"
+                version: "1.0.0"
+                service: "talk2me-ui"
+
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      description: Get Prometheus-formatted metrics for monitoring
+      tags:
+        - Monitoring
+      responses:
+        '200':
+          description: Metrics data
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Prometheus metrics in text format
+
+  # Authentication
+  /auth/login:
+    get:
+      summary: Login page
+      description: Get the HTML login page
+      tags:
+        - Authentication
+      responses:
+        '200':
+          description: Login page HTML
+          content:
+            text/html:
+              schema:
+                type: string
+    post:
+      summary: User login
+      description: Authenticate user and create session
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '302':
+          description: Login successful, redirect to dashboard
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                description: Session cookie
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/register:
+    get:
+      summary: Registration page
+      description: Get the HTML registration page
+      tags:
+        - Authentication
+      responses:
+        '200':
+          description: Registration page HTML
+          content:
+            text/html:
+              schema:
+                type: string
+    post:
+      summary: User registration
+      description: Register a new user account
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '302':
+          description: Registration successful, redirect to login
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      summary: User logout
+      description: Destroy user session and clear cookies
+      tags:
+        - Authentication
+      responses:
+        '302':
+          description: Logout successful, redirect to login
+
+  # STT endpoints
+  /api/stt:
+    post:
+      summary: Speech-to-text transcription
+      description: |
+        Upload an audio file for speech-to-text transcription.
+
+        Supported formats: WAV, MP3, OGG, FLAC, AAC, M4A
+        Maximum file size: 50MB
+        Recommended: 16-bit mono WAV at 16kHz
+      tags:
+        - STT
+      security:
+        - sessionAuth: []
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                audio_file:
+                  type: string
+                  format: binary
+                  description: Audio file to transcribe
+                sample_rate:
+                  type: integer
+                  description: Optional sample rate override (default 16000)
+                  example: 16000
+              required:
+                - audio_file
+      responses:
+        '200':
+          description: Transcription task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+              example:
+                task_id: "123e4567-e89b-12d3-a456-426614174000"
+        '400':
+          description: Invalid file or parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/stt/{task_id}:
+    get:
+      summary: Get STT task status
+      description: Check the status of a speech-to-text transcription task
+      tags:
+        - STT
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Task identifier
+          example: "123e4567-e89b-12d3-a456-426614174000"
+      responses:
+        '200':
+          description: Task status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskStatus'
+              examples:
+                processing:
+                  value:
+                    status: processing
+                completed:
+                  value:
+                    status: completed
+                    result:
+                      text: "Hello, how can I help you today?"
+                failed:
+                  value:
+                    status: failed
+                    error: "Audio format not supported"
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # TTS endpoints
+  /api/tts:
+    post:
+      summary: Text-to-speech synthesis
+      description: |
+        Generate speech audio from text using specified voice and parameters.
+
+        Text length limit: 5000 characters
+        Speed range: 0.5x to 2.0x
+        Pitch range: -12 to +12 semitones
+      tags:
+        - TTS
+      security:
+        - sessionAuth: []
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TTSRequest'
+      responses:
+        '200':
+          description: Synthesis task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/tts/{task_id}:
+    get:
+      summary: Get TTS task status
+      description: Check the status of a text-to-speech synthesis task
+      tags:
+        - TTS
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Task identifier
+      responses:
+        '200':
+          description: Task status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskStatus'
+        '404':
+          description: Task not found
+
+  /api/tts/audio/{task_id}:
+    get:
+      summary: Download TTS audio
+      description: Download the generated speech audio for a completed TTS task
+      tags:
+        - TTS
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Task identifier
+      responses:
+        '200':
+          description: Audio file
+          content:
+            audio/wav:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Task not completed
+        '404':
+          description: Task not found
+
+  # Voice management
+  /api/voices:
+    get:
+      summary: List voices
+      description: Get a list of all available voices
+      tags:
+        - Voices
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: List of voices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceList'
+              example:
+                voices:
+                  - name: "Default Voice"
+                    display_name: "Default Voice"
+                    language: "en"
+                    voice_id: "default"
+                  - name: "Spanish Voice"
+                    display_name: "Spanish Voice"
+                    language: "es"
+                    voice_id: "spanish_voice"
+    post:
+      summary: Create voice
+      description: |
+        Create a new voice profile with optional audio samples for cloning.
+
+        Voice creation is asynchronous. Samples are processed in the background.
+      tags:
+        - Voices
+      security:
+        - sessionAuth: []
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VoiceCreateRequest'
+      responses:
+        '200':
+          description: Voice created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceCreateResponse'
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/voices/{voice_id}:
+    put:
+      summary: Update voice
+      description: Update voice profile metadata or add new samples
+      tags:
+        - Voices
+      security:
+        - sessionAuth: []
+        - csrfToken: []
+      parameters:
+        - name: voice_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Voice identifier
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VoiceUpdateRequest'
+      responses:
+        '200':
+          description: Voice updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Voice updated successfully"
+        '404':
+          description: Voice not found
+    delete:
+      summary: Delete voice
+      description: Delete a voice profile and all associated samples
+      tags:
+        - Voices
+      security:
+        - sessionAuth: []
+        - csrfToken: []
+      parameters:
+        - name: voice_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Voice identifier
+      responses:
+        '200':
+          description: Voice deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Voice deleted successfully"
+        '404':
+          description: Voice not found
+
+  # Audiobook endpoints
+  /api/audiobook:
+    post:
+      summary: Generate audiobook
+      description: |
+        Generate an audiobook from text with triple-brace markup.
+
+        Supports voice switching, background audio, sound effects, and pauses.
+        Processing is asynchronous and may take several minutes for long texts.
+      tags:
+        - Audiobooks
+      security:
+        - sessionAuth: []
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AudiobookRequest'
+      responses:
+        '200':
+          description: Audiobook generation task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '400':
+          description: Invalid markup or parameters
+
+  /api/audiobook/{task_id}:
+    get:
+      summary: Get audiobook task status
+      description: Check the status of an audiobook generation task
+      tags:
+        - Audiobooks
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Task identifier
+      responses:
+        '200':
+          description: Task status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskStatus'
+        '404':
+          description: Task not found
+
+  /api/audiobook/audio/{task_id}:
+    get:
+      summary: Download audiobook
+      description: Download the generated audiobook for a completed task
+      tags:
+        - Audiobooks
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Task identifier
+      responses:
+        '200':
+          description: Audiobook audio file
+          content:
+            audio/wav:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Task not completed
+        '404':
+          description: Task not found
+
+  # Sound effects endpoints
+  /api/sounds/effects:
+    get:
+      summary: List sound effects
+      description: Get a list of all uploaded sound effects
+      tags:
+        - Sound Effects
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: List of sound effects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SoundEffect'
+    post:
+      summary: Upload sound effect
+      description: |
+        Upload a new sound effect with metadata.
+
+        Supported formats: WAV, MP3, OGG, FLAC, AAC, M4A
+        Maximum file size: 50MB
+      tags:
+        - Sound Effects
+      security:
+        - sessionAuth: []
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SoundEffectUploadRequest'
+      responses:
+        '200':
+          description: Sound effect uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoundUploadResponse'
+        '400':
+          description: Invalid file or parameters
+
+  /api/sounds/effects/{sound_id}:
+    get:
+      summary: Get sound effect metadata
+      description: Get metadata for a specific sound effect
+      tags:
+        - Sound Effects
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: sound_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Sound effect identifier
+      responses:
+        '200':
+          description: Sound effect metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoundEffect'
+        '404':
+          description: Sound effect not found
+    put:
+      summary: Update sound effect
+      description: Update metadata for a sound effect
+      tags:
+        - Sound Effects
+      security:
+        - sessionAuth: []
+        - csrfToken: []
+      parameters:
+        - name: sound_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Sound effect identifier
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                category:
+                  type: string
+                volume:
+                  type: number
+                fade_in:
+                  type: number
+                fade_out:
+                  type: number
+                duration:
+                  type: number
+                pause_speech:
+                  type: boolean
+      responses:
+        '200':
+          description: Sound effect updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoundEffect'
+        '404':
+          description: Sound effect not found
+    delete:
+      summary: Delete sound effect
+      description: Delete a sound effect and its audio file
+      tags:
+        - Sound Effects
+      security:
+        - sessionAuth: []
+        - csrfToken: []
+      parameters:
+        - name: sound_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Sound effect identifier
+      responses:
+        '200':
+          description: Sound effect deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Sound effect deleted successfully"
+
+  /api/sounds/effects/{sound_id}/audio:
+    get:
+      summary: Download sound effect audio
+      description: Download the audio file for a sound effect
+      tags:
+        - Sound Effects
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: sound_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Sound effect identifier
+      responses:
+        '200':
+          description: Audio file
+          content:
+            audio/*:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Sound effect not found
+
+  # Background audio endpoints
+  /api/sounds/background:
+    get:
+      summary: List background audio
+      description: Get a list of all uploaded background audio tracks
+      tags:
+        - Background Audio
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: List of background audio
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BackgroundAudio'
+    post:
+      summary: Upload background audio
+      description: |
+        Upload a new background audio track with metadata.
+
+        Supported formats: WAV, MP3, OGG, FLAC, AAC, M4A
+        Maximum file size: 50MB
+      tags:
+        - Background Audio
+      security:
+        - sessionAuth: []
+        - csrfToken: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BackgroundAudioUploadRequest'
+      responses:
+        '200':
+          description: Background audio uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoundUploadResponse'
+        '400':
+          description: Invalid file or parameters
+
+  /api/sounds/background/{sound_id}:
+    get:
+      summary: Get background audio metadata
+      description: Get metadata for a specific background audio track
+      tags:
+        - Background Audio
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: sound_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Background audio identifier
+      responses:
+        '200':
+          description: Background audio metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackgroundAudio'
+        '404':
+          description: Background audio not found
+    put:
+      summary: Update background audio
+      description: Update metadata for a background audio track
+      tags:
+        - Background Audio
+      security:
+        - sessionAuth: []
+        - csrfToken: []
+      parameters:
+        - name: sound_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Background audio identifier
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                sound_type:
+                  type: string
+                  enum: [ambient, music, nature]
+                volume:
+                  type: number
+                fade_in:
+                  type: number
+                fade_out:
+                  type: number
+                duck_level:
+                  type: number
+                loop:
+                  type: boolean
+                duck_speech:
+                  type: boolean
+      responses:
+        '200':
+          description: Background audio updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackgroundAudio'
+        '404':
+          description: Background audio not found
+    delete:
+      summary: Delete background audio
+      description: Delete a background audio track and its file
+      tags:
+        - Background Audio
+      security:
+        - sessionAuth: []
+        - csrfToken: []
+      parameters:
+        - name: sound_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Background audio identifier
+      responses:
+        '200':
+          description: Background audio deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Background audio deleted successfully"
+
+  /api/sounds/background/{sound_id}/audio:
+    get:
+      summary: Download background audio
+      description: Download the audio file for a background audio track
+      tags:
+        - Background Audio
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: sound_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Background audio identifier
+      responses:
+        '200':
+          description: Audio file
+          content:
+            audio/*:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Background audio not found
+
+  # WebSocket endpoint
+  /ws/conversation:
+    get:
+      summary: Real-time conversation WebSocket
+      description: |
+        WebSocket endpoint for real-time bidirectional conversation.
+
+        **Connection Protocol:**
+        1. Client connects to `/ws/conversation`
+        2. Server sends `{"type": "connected", "conversation_id": "..."}`
+        3. Client sends audio chunks as binary data
+        4. Server processes audio for wake word detection and transcription
+        5. Server responds with transcription and synthesized speech
+
+        **Message Types:**
+        - Client → Server: Binary audio data
+        - Server → Client: JSON messages (transcription, errors, etc.)
+      tags:
+        - WebSocket
+      security:
+        - sessionAuth: []
+      responses:
+        '101':
+          description: WebSocket connection established
+        '401':
+          description: Authentication required
+        '500':
+          description: Server error

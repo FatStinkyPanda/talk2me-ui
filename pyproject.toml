@@ -3,8 +3,51 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "test-quality"
+name = "talk2me-ui"
 version = "0.1.0"
+description = "A lightweight, fully offline user interface for the Talk2Me voice interaction system. This UI provides comprehensive access to all Talk2Me API endpoints, enabling speech-to-text transcription, text-to-speech synthesis with voice cloning, and advanced audiobook generation with multi-voice support, sound effects, and background audio."
+authors = [
+    {name = "FatStinkyPanda", email = "support@fatstinkypanda.com"}
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Framework :: FastAPI"
+]
+keywords = ["web", "ui", "talk2me", "fastapi", "offline", "voice", "speech", "tts", "stt", "audiobook", "voice-cloning"]
+dependencies = [
+    "fastapi>=0.115.6",
+    "uvicorn[standard]>=0.32.1",
+    "requests>=2.32.3",
+    "pydantic>=2.10.3",
+    "pyyaml>=6.0.2",
+    "python-multipart>=0.0.17",
+    "jinja2>=3.1.4",
+    "aiofiles>=24.1.0",
+    "websockets>=13.1",
+    "pydub>=0.25.1",
+    "prometheus-client>=0.21.0"
+]
+optional-dependencies = {test = [
+    "pytest>=8.3.4",
+    "pytest-cov>=6.0.0",
+    "pytest-asyncio>=0.25.1",
+    "httpx>=0.28.1",
+    "psutil>=6.0.0"
+]}
 
 [tool.ruff]
 target-version = "py310"
@@ -26,7 +69,7 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra -q --cov=. --cov-report=term-missing --cov-fail-under=80"
+addopts = "-ra -q --cov=. --cov-report=term-missing --cov-fail-under=80 --maxfail=1 -n auto --dist=load"
 asyncio_mode = "auto"
 
 [tool.coverage.run]

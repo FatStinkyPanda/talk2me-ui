@@ -1,0 +1,32 @@
+# Dockerfile for Talk2Me UI Backup Service
+FROM alpine:latest
+
+# Install required packages
+RUN apk add --no-cache \
+    bash \
+    tar \
+    gzip \
+    aws-cli \
+    openssh-client \
+    curl \
+    findutils \
+    coreutils
+
+# Create app directory
+WORKDIR /app
+
+# Copy backup scripts
+COPY scripts/backup.sh /app/backup.sh
+COPY scripts/restore.sh /app/restore.sh
+
+# Make scripts executable
+RUN chmod +x /app/backup.sh /app/restore.sh
+
+# Create necessary directories
+RUN mkdir -p /app/data /app/backups /app/logs /app/scripts
+
+# Set up cron for automated backups
+RUN echo "0 2 * * * /app/backup.sh >> /app/logs/cron.log 2>&1" > /etc/crontabs/root
+
+# Default command - run cron in foreground
+CMD ["crond", "-f", "-l", "8"]

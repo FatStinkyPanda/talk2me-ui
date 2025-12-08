@@ -4,9 +4,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Talk2Me UI{% endblock %}</title>
+    <title>{% block title %}{{ _("Talk2Me UI") }}{% endblock %}</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#2563eb">
+    <meta name="description"
+        content="{{ _('A modern web interface for AI-powered conversations and audio processing') }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Talk2Me">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+    <link rel="manifest" href="{{ url_for('static', path='manifest.json') }}">
+
+    {% if config.get('APP_ENV') == 'production' %}
+    <link rel="stylesheet" href="{{ url_for('static', path='css/styles.min.css') }}">
+    <script src="https://unpkg.com/i18next@23.7.6/i18next.min.js"></script>
+    <script
+        src="https://unpkg.com/i18next-browser-languagedetector@7.2.0/i18nextBrowserLanguageDetector.min.js"></script>
+    <script src="https://unpkg.com/i18next-http-backend@2.4.2/i18nextHttpBackend.min.js"></script>
+    <script src="{{ url_for('static', path='js/app.min.js') }}" defer></script>
+    {% else %}
     <link rel="stylesheet" href="{{ url_for('static', path='css/styles.css') }}">
+    <script src="https://unpkg.com/i18next@23.7.6/i18next.min.js"></script>
+    <script
+        src="https://unpkg.com/i18next-browser-languagedetector@7.2.0/i18nextBrowserLanguageDetector.min.js"></script>
+    <script src="https://unpkg.com/i18next-http-backend@2.4.2/i18nextHttpBackend.min.js"></script>
     <script src="{{ url_for('static', path='js/app.js') }}" defer></script>
+    {% endif %}
+    <!-- CSRF Token for forms -->
+    <meta name="csrf-token" content="{{ get_csrf_context(request)['csrf_token'] }}">
     {% block extra_head %}{% endblock %}
 </head>
 
@@ -19,28 +45,55 @@
             </div>
             <nav class="main-nav">
                 <ul>
-                    <li><a href="/" class="{% if request.url.path == '/' %}active{% endif %}">Dashboard</a></li>
-                    <li><a href="/voices" class="{% if request.url.path == '/voices' %}active{% endif %}">Voice
-                            Management</a></li>
-                    <li><a href="/stt" class="{% if request.url.path == '/stt' %}active{% endif %}">Speech-to-Text</a>
+                    <li><a href="/" class="{% if request.url.path == '/' %}active{% endif %}">{{ _("Dashboard") }}</a>
                     </li>
-                    <li><a href="/tts" class="{% if request.url.path == '/tts' %}active{% endif %}">Text-to-Speech</a>
-                    </li>
-                    <li><a href="/audiobook"
-                            class="{% if request.url.path == '/audiobook' %}active{% endif %}">Audiobook Studio</a></li>
-                    <li><a href="/sounds" class="{% if request.url.path == '/sounds' %}active{% endif %}">Sound
-                            Library</a></li>
-                    <li><a href="/conversation"
-                            class="{% if request.url.path == '/conversation' %}active{% endif %}">Live Conversation</a>
-                    </li>
-                    <li><a href="/settings"
-                            class="{% if request.url.path == '/settings' %}active{% endif %}">Settings</a></li>
+                    <li><a href="/voices" class="{% if request.url.path == '/voices' %}active{% endif %}">{{ _("Voice
+                            Management") }}</a></li>
+                    <li><a href="/stt" class="{% if request.url.path == '/stt' %}active{% endif %}">{{
+                            _("Speech-to-Text") }}</a></li>
+                    <li><a href="/tts" class="{% if request.url.path == '/tts' %}active{% endif %}">{{
+                            _("Text-to-Speech") }}</a></li>
+                    <li><a href="/audiobook" class="{% if request.url.path == '/audiobook' %}active{% endif %}">{{
+                            _("Audiobook Studio") }}</a></li>
+                    <li><a href="/sounds" class="{% if request.url.path == '/sounds' %}active{% endif %}">{{ _("Sound
+                            Library") }}</a></li>
+                    <li><a href="/conversation" class="{% if request.url.path == '/conversation' %}active{% endif %}">{{
+                            _("Live Conversation") }}</a></li>
+                    <li><a href="/docs" class="{% if request.url.path == '/docs' %}active{% endif %}">{{ _("API Docs")
+                            }}</a></li>
+                    {% if request.state.user and request.state.user.role_name == 'admin' %}
+                    <li><a href="/admin/roles" class="{% if request.url.path == '/admin/roles' %}active{% endif %}">{{
+                            _("Role Management") }}</a></li>
+                    {% endif %}
+                    <li><a href="/settings" class="{% if request.url.path == '/settings' %}active{% endif %}">{{
+                            _("Settings") }}</a></li>
                 </ul>
             </nav>
             <div class="header-actions">
+                {% if request.state.user %}
+                <div class="user-info">
+                    <span class="user-greeting">{{ _("Welcome, %(username)s", username=request.state.user.username)
+                        }}</span>
+                    <form method="post" action="/auth/logout" style="display: inline;">
+                        <input type="hidden" name="csrf_token" value="{{ get_csrf_context(request)['csrf_token'] }}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">{{ _("Logout") }}</button>
+                    </form>
+                </div>
+                {% endif %}
+                <!-- Language Selector -->
+                <div class="language-selector">
+                    <select id="language-select" onchange="changeLanguage(this.value)">
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                        <option value="fr">Français</option>
+                        <option value="de">Deutsch</option>
+                        <option value="zh">中文</option>
+                    </select>
+                </div>
+
                 <div class="backend-status" id="backend-status">
                     <span class="status-indicator" id="status-indicator"></span>
-                    <span id="status-text">Checking...</span>
+                    <span id="status-text">{{ _("Checking...") }}</span>
                 </div>
             </div>
         </div>
@@ -50,35 +103,35 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-content">
             <div class="sidebar-section">
-                <h3>Quick Actions</h3>
+                <h3>{{ _("Quick Actions") }}</h3>
                 <ul class="sidebar-menu">
-                    <li><a href="/tts" class="quick-action">New TTS</a></li>
-                    <li><a href="/voices" class="quick-action">Create Voice</a></li>
-                    <li><a href="/audiobook" class="quick-action">New Audiobook</a></li>
-                    <li><a href="/sounds" class="quick-action">Add Sound</a></li>
+                    <li><a href="/tts" class="quick-action">{{ _("New TTS") }}</a></li>
+                    <li><a href="/voices" class="quick-action">{{ _("Create Voice") }}</a></li>
+                    <li><a href="/audiobook" class="quick-action">{{ _("New Audiobook") }}</a></li>
+                    <li><a href="/sounds" class="quick-action">{{ _("Add Sound") }}</a></li>
                 </ul>
             </div>
 
             <div class="sidebar-section">
-                <h3>Recent Activity</h3>
+                <h3>{{ _("Recent Activity") }}</h3>
                 <div class="recent-activity" id="recent-activity">
-                    <p class="no-activity">No recent activity</p>
+                    <p class="no-activity">{{ _("No recent activity") }}</p>
                 </div>
             </div>
 
             <div class="sidebar-section">
-                <h3>System Info</h3>
+                <h3>{{ _("System Info") }}</h3>
                 <div class="system-info">
                     <div class="info-item">
-                        <span class="label">Voices:</span>
+                        <span class="label">{{ _("Voices:") }}</span>
                         <span class="value" id="voice-count">-</span>
                     </div>
                     <div class="info-item">
-                        <span class="label">Projects:</span>
+                        <span class="label">{{ _("Projects:") }}</span>
                         <span class="value" id="project-count">-</span>
                     </div>
                     <div class="info-item">
-                        <span class="label">Storage:</span>
+                        <span class="label">{{ _("Storage:") }}</span>
                         <span class="value" id="storage-usage">-</span>
                     </div>
                 </div>
@@ -97,7 +150,7 @@
     <div class="modal" id="progress-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="progress-title">Processing...</h3>
+                <h3 id="progress-title">{{ _("Processing...") }}</h3>
                 <button class="close-btn" onclick="closeProgressModal()">&times;</button>
             </div>
             <div class="modal-body">
@@ -105,7 +158,7 @@
                     <div class="progress-bar">
                         <div class="progress-fill" id="progress-fill"></div>
                     </div>
-                    <div class="progress-text" id="progress-text">Initializing...</div>
+                    <div class="progress-text" id="progress-text">{{ _("Initializing...") }}</div>
                 </div>
             </div>
         </div>
@@ -115,7 +168,7 @@
     <div class="modal" id="error-modal">
         <div class="modal-content error-modal">
             <div class="modal-header">
-                <h3>Error</h3>
+                <h3>{{ _("Error") }}</h3>
                 <button class="close-btn" onclick="closeErrorModal()">&times;</button>
             </div>
             <div class="modal-body">
@@ -123,7 +176,7 @@
                 <div class="error-details" id="error-details"></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeErrorModal()">Close</button>
+                <button class="btn btn-secondary" onclick="closeErrorModal()">{{ _("Close") }}</button>
             </div>
         </div>
     </div>
@@ -132,14 +185,14 @@
     <div class="modal" id="success-modal">
         <div class="modal-content success-modal">
             <div class="modal-header">
-                <h3>Success</h3>
+                <h3>{{ _("Success") }}</h3>
                 <button class="close-btn" onclick="closeSuccessModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="success-message" id="success-message"></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" onclick="closeSuccessModal()">OK</button>
+                <button class="btn btn-primary" onclick="closeSuccessModal()">{{ _("OK") }}</button>
             </div>
         </div>
     </div>

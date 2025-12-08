@@ -14,7 +14,6 @@ METRICS_FILE="${METRICS_FILE:-logs/metrics.json}"
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Ensure log directory exists
@@ -24,19 +23,16 @@ mkdir -p logs
 log() {
     local level="$1"
     local message="$2"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local timestamp
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[$timestamp] [$level] $message" >> "$LOG_FILE"
     echo "[$timestamp] [$level] $message"
 }
 
 # Health check function
 check_health() {
-    local response
     local http_code
-
-    # Make health check request
-    response=$(curl -s -w "HTTPSTATUS:%{http_code}" "$HEALTH_URL" 2>/dev/null)
-    http_code=$(echo "$response" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+    http_code=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" 2>/dev/null)
 
     if [ "$http_code" -eq 200 ]; then
         log "INFO" "Health check passed (HTTP $http_code)"
@@ -49,18 +45,22 @@ check_health() {
 
 # Collect system metrics
 collect_metrics() {
-    local timestamp=$(date '+%s')
-    local cpu_usage=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')
-    local mem_usage=$(free | grep Mem | awk '{printf "%.2f", $3/$2 * 100.0}')
-    local disk_usage=$(df / | tail -1 | awk '{print $5}' | sed 's/%//')
+    local timestamp
+    timestamp=$(date '+%s')
+    local cpu_usage
+    cpu_usage=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')
+    local mem_usage
+    mem_usage=$(free | grep Mem | awk '{printf "%.2f", $3/$2 * 100.0}')
+    local disk_usage
+    disk_usage=$(df / | tail -1 | awk '{print $5}' | sed 's/%//')
 
     # Create metrics JSON
     cat > "$METRICS_FILE" << EOF
 {
-  "timestamp": $timestamp,
-  "cpu_percent": $cpu_usage,
-  "memory_percent": $mem_usage,
-  "disk_percent": $disk_usage,
+  "timestamp": "$timestamp",
+  "cpu_percent": "$cpu_usage",
+  "memory_percent": "$mem_usage",
+  "disk_percent": "$disk_usage",
   "health_status": "$(check_health && echo "healthy" || echo "unhealthy")"
 }
 EOF

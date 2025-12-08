@@ -1,5 +1,4 @@
-"""
-Custom exception classes for Talk2Me UI API errors.
+"""Custom exception classes for Talk2Me UI API errors.
 
 This module defines custom exceptions for different types of API errors,
 providing structured error handling and proper HTTP status codes.
@@ -11,8 +10,7 @@ from fastapi import HTTPException
 
 
 class Talk2MeException(Exception):
-    """
-    Base exception class for Talk2Me UI errors.
+    """Base exception class for Talk2Me UI errors.
 
     Attributes:
         message: Human-readable error message
@@ -134,8 +132,7 @@ class AudioProcessingError(Talk2MeException):
 
 
 def create_http_exception(exc: Talk2MeException) -> HTTPException:
-    """
-    Convert a Talk2MeException to a FastAPI HTTPException.
+    """Convert a Talk2MeException to a FastAPI HTTPException.
 
     Args:
         exc: The Talk2MeException to convert
@@ -150,8 +147,7 @@ def create_http_exception(exc: Talk2MeException) -> HTTPException:
 
 
 def handle_exception(exc: Exception) -> HTTPException:
-    """
-    Handle various exception types and convert to appropriate HTTP responses.
+    """Handle various exception types and convert to appropriate HTTP responses.
 
     Args:
         exc: The exception to handle

@@ -103,13 +103,7 @@
         <div class="text-editor-container">
             <textarea id="audiobook-text" class="code-editor" placeholder="Enter your audiobook text here...
 
-Use triple braces {{{...}}} for special markup:
-
-{{{voice:narrator}}}
-{{{voice:character_name}}}
-{{{sfx:sound_effect}}}
-{{{bg:background_music}}}
-{{{bg:stop}}}
+Use triple braces for special markup: {{{voice:name}}}, {{{sfx:id}}}, {{{bg:id}}}
 
 Example:
 {{{voice:narrator}}}
@@ -219,6 +213,7 @@ And so the adventure began..."></textarea>
 
 {% block extra_scripts %}
 <script>
+    {% raw %}
     document.addEventListener('DOMContentLoaded', function () {
         // Initialize editor
         initializeTextEditor();
@@ -546,5 +541,6 @@ And so the adventure began..."></textarea>
         div.textContent = text;
         return div.innerHTML;
     }
+    {% endraw %}
 </script>
 {% endblock %}

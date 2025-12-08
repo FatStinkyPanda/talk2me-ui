@@ -55,8 +55,8 @@ repos:
       - id: check-merge-conflict
         name: "⚔️ Check merge conflicts"
       - id: no-commit-to-branch
-        name: "🛡️ Protect main branch"
-        args: ["--branch", "main", "--branch", "master"]
+        name: "🛡️ Protect master branch"
+        args: ["--branch", "master"]
 
       # Executables
       - id: check-executables-have-shebangs

@@ -1,11 +1,59 @@
 {
+  "name": "talk2me-ui",
+  "version": "1.0.0",
+  "description": "A user interface for the Talk2Me application",
+  "type": "module",
+  "module": "src/talk2me_ui/static/js/app.js",
+  "scripts": {
+    "lint": "eslint src/talk2me_ui/static/js/**/*.js",
+    "lint:fix": "eslint src/talk2me_ui/static/js/**/*.js --fix",
+    "format": "prettier --write src/talk2me_ui/static/js/**/*.js",
+    "format:check": "prettier --check src/talk2me_ui/static/js/**/*.js",
+    "build": "npm run build:css && npm run build:js && npm run optimize:images",
+    "build:css": "postcss src/talk2me_ui/static/css/styles.css -o src/talk2me_ui/static/css/styles.min.css --use postcss-cssnano autoprefixer",
+    "build:js": "terser src/talk2me_ui/static/js/app.js -o src/talk2me_ui/static/js/app.min.js --compress --mangle",
+    "optimize:images": "imagemin src/talk2me_ui/static/icons/* --out-dir=src/talk2me_ui/static/icons --plugin=mozjpeg --plugin=pngquant --plugin=svgo",
+    "watch:css": "postcss src/talk2me_ui/static/css/styles.css -o src/talk2me_ui/static/css/styles.min.css --use postcss-cssnano autoprefixer --watch",
+    "watch:js": "onchange 'src/talk2me_ui/static/js/**/*.js' -- npm run build:js",
+    "test": "echo 'Test script placeholder - add test commands as needed'"
+  },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.48.1",
     "@typescript-eslint/parser": "^8.48.1",
+    "autoprefixer": "^10.4.20",
+    "cssnano": "^7.0.6",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-prettier": "^5.5.4",
-    "prettier": "^3.7.4"
+    "imagemin": "^9.0.0",
+    "imagemin-mozjpeg": "^10.0.0",
+    "imagemin-pngquant": "^10.0.0",
+    "imagemin-svgo": "^11.0.0",
+    "onchange": "^7.1.0",
+    "postcss": "^8.4.47",
+    "postcss-cli": "^11.0.0",
+    "prettier": "^3.7.4",
+    "terser": "^5.36.0"
+  },
+  "keywords": [
+    "ui",
+    "talk2me",
+    "frontend"
+  ],
+  "author": "",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "bugs": {
+    "url": ""
+  },
+  "homepage": "",
+  "dependencies": {
+    "i18next": "^25.7.1",
+    "i18next-browser-languagedetector": "^8.2.0",
+    "i18next-http-backend": "^3.0.2"
   }
 }

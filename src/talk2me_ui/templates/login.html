@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _("Login - Talk2Me UI") }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">{{ _("Login to Talk2Me") }}</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="/auth/login">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+                        <div class="mb-3">
+                            <label for="username" class="form-label">{{ _("Username or Email") }}</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">{{ _("Password") }}</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">{{ _("Login") }}</button>
+                        </div>
+                    </form>
+
+                    <div class="text-center mt-3">
+                        <p>{{ _("Don't have an account?") }} <a href="/auth/register">{{ _("Register here") }}</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

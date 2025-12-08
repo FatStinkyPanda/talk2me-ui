@@ -1,5 +1,4 @@
-"""
-Configuration management system for Talk2Me UI.
+"""Configuration management system for Talk2Me UI.
 
 This module provides Pydantic models for configuration settings and functions
 to load configuration from YAML files with validation and error handling.
@@ -55,8 +54,7 @@ class Config(BaseModel):
 
 
 def load_yaml_config(file_path: Path) -> dict[str, Any]:
-    """
-    Load configuration from a YAML file.
+    """Load configuration from a YAML file.
 
     Args:
         file_path: Path to the YAML configuration file
@@ -89,8 +87,7 @@ def load_yaml_config(file_path: Path) -> dict[str, Any]:
 
 
 def merge_configs(base_config: dict[str, Any], override_config: dict[str, Any]) -> dict[str, Any]:
-    """
-    Merge two configuration dictionaries, with override_config taking precedence.
+    """Merge two configuration dictionaries, with override_config taking precedence.
 
     Args:
         base_config: Base configuration dictionary
@@ -115,8 +112,7 @@ def merge_configs(base_config: dict[str, Any], override_config: dict[str, Any]) 
 def load_config(
     default_config_path: Path | None = None, user_config_path: Path | None = None
 ) -> Config:
-    """
-    Load and validate configuration from YAML files.
+    """Load and validate configuration from YAML files.
 
     Loads default configuration and optionally merges with user configuration.
 
@@ -187,8 +183,7 @@ _config: Config | None = None
 
 
 def get_config() -> Config:
-    """
-    Get the global configuration instance.
+    """Get the global configuration instance.
 
     Loads configuration on first call if not already loaded.
 
@@ -208,8 +203,7 @@ def get_config() -> Config:
 def reload_config(
     default_config_path: Path | None = None, user_config_path: Path | None = None
 ) -> Config:
-    """
-    Reload configuration from files.
+    """Reload configuration from files.
 
     Args:
         default_config_path: Path to default configuration file

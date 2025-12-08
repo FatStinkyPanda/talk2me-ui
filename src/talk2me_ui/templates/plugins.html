@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+
+{% block title %}Plugin Marketplace - Talk2Me UI{% endblock %}
+
+{% block head %}
+<style>
+    .plugin-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+        background: white;
+    }
+
+    .plugin-card h3 {
+        margin-top: 0;
+        color: #333;
+    }
+
+    .plugin-card .description {
+        color: #666;
+        margin: 8px 0;
+    }
+
+    .plugin-card .metadata {
+        font-size: 0.9em;
+        color: #888;
+        margin: 8px 0;
+    }
+
+    .plugin-card .actions {
+        margin-top: 12px;
+    }
+
+    .plugin-card .actions button {
+        margin-right: 8px;
+        padding: 6px 12px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .plugin-card .actions .install-btn {
+        background: #007bff;
+        color: white;
+    }
+
+    .plugin-card .actions .uninstall-btn {
+        background: #dc3545;
+        color: white;
+    }
+
+    .plugin-card .actions .activate-btn {
+        background: #28a745;
+        color: white;
+    }
+
+    .plugin-card .actions .deactivate-btn {
+        background: #ffc107;
+        color: black;
+    }
+
+    .plugin-card .actions .update-btn {
+        background: #17a2b8;
+        color: white;
+    }
+
+    .plugin-status {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+
+    .plugin-status.active {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .plugin-status.inactive {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .plugin-status.error {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .filters {
+        margin-bottom: 20px;
+        padding: 16px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .filters input,
+    .filters select {
+        margin-right: 12px;
+        padding: 6px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .filters button {
+        padding: 6px 12px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+    }
+
+    .error {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 16px;
+    }
+
+    .success {
+        background: #d4edda;
+        color: #155724;
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Plugin Marketplace</h1>
+
+    <div class="filters">
+        <input type="text" id="search-input" placeholder="Search plugins..." />
+        <select id="category-select">
+            <option value="">All Categories</option>
+            <option value="audio_processor">Audio Processor</option>
+            <option value="ui_component">UI Component</option>
+            <option value="api_endpoint">API Endpoint</option>
+            <option value="integration">Integration</option>
+        </select>
+        <button id="search-btn">Search</button>
+        <button id="refresh-btn">Refresh</button>
+    </div>
+
+    <div id="message-container"></div>
+
+    <div id="installed-plugins-section">
+        <h2>Installed Plugins</h2>
+        <div id="installed-plugins" class="loading">Loading installed plugins...</div>
+    </div>
+
+    <div id="marketplace-section">
+        <h2>Available Plugins</h2>
+        <div id="marketplace-plugins" class="loading">Loading marketplace...</div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('search-input');
+        const categorySelect = document.getElementById('category-select');
+        const searchBtn = document.getElementById('search-btn');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const messageContainer = document.getElementById('message-container');
+        const installedPlugins = document.getElementById('installed-plugins');
+        const marketplacePlugins = document.getElementById('marketplace-plugins');
+
+        let currentSearch = '';
+        let currentCategory = '';
+
+        // Load initial data
+        loadInstalledPlugins();
+        loadMarketplacePlugins();
+
+        // Event listeners
+        searchBtn.addEventListener('click', function () {
+            currentSearch = searchInput.value;
+            currentCategory = categorySelect.value;
+            loadMarketplacePlugins();
+        });
+
+        refreshBtn.addEventListener('click', function () {
+            loadInstalledPlugins();
+            loadMarketplacePlugins();
+        });
+
+        searchInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                searchBtn.click();
+            }
+        });
+
+        async function loadInstalledPlugins() {
+            try {
+                const response = await fetch('/api/plugins');
+                const data = await response.json();
+
+                if (data.plugins && data.plugins.length > 0) {
+                    installedPlugins.innerHTML = data.plugins.map(plugin => createInstalledPluginCard(plugin)).join('');
+                } else {
+                    installedPlugins.innerHTML = '<p>No plugins installed.</p>';
+                }
+            } catch (error) {
+                installedPlugins.innerHTML = '<div class="error">Failed to load installed plugins.</div>';
+                console.error('Error loading installed plugins:', error);
+            }
+        }
+
+        async function loadMarketplacePlugins() {
+            try {
+                const params = new URLSearchParams();
+                if (currentSearch) params.append('search', currentSearch);
+                if (currentCategory) params.append('category', currentCategory);
+
+                const response = await fetch(`/api/plugins/marketplace?${params}`);
+                const data = await response.json();
+
+                if (data.plugins && data.plugins.length > 0) {
+                    marketplacePlugins.innerHTML = data.plugins.map(plugin => createMarketplacePluginCard(plugin)).join('');
+                } else {
+                    marketplacePlugins.innerHTML = '<p>No plugins found in marketplace.</p>';
+                }
+            } catch (error) {
+                marketplacePlugins.innerHTML = '<div class="error">Failed to load marketplace plugins.</div>';
+                console.error('Error loading marketplace plugins:', error);
+            }
+        }
+
+        function createInstalledPluginCard(plugin) {
+            const statusClass = plugin.active ? 'active' : 'inactive';
+            const statusText = plugin.active ? 'Active' : 'Inactive';
+
+            return `
+            <div class="plugin-card">
+                <h3>${plugin.name}</h3>
+                <div class="description">${plugin.description || 'No description available'}</div>
+                <div class="metadata">
+                    Version: ${plugin.version} | Author: ${plugin.author} | Type: ${plugin.type}
+                    <span class="plugin-status ${statusClass}">${statusText}</span>
+                </div>
+                <div class="actions">
+                    ${plugin.active ?
+                    `<button class="deactivate-btn" onclick="deactivatePlugin('${plugin.name}')">Deactivate</button>` :
+                    `<button class="activate-btn" onclick="activatePlugin('${plugin.name}')">Activate</button>`
+                }
+                    <button class="uninstall-btn" onclick="uninstallPlugin('${plugin.name}')">Uninstall</button>
+                    <button class="update-btn" onclick="updatePlugin('${plugin.name}')">Update</button>
+                </div>
+            </div>
+        `;
+        }
+
+        function createMarketplacePluginCard(plugin) {
+            return `
+            <div class="plugin-card">
+                <h3>${plugin.name}</h3>
+                <div class="description">${plugin.description || 'No description available'}</div>
+                <div class="metadata">
+                    Version: ${plugin.latest_version?.version || 'Unknown'} |
+                    Author: ${plugin.author} |
+                    Downloads: ${plugin.downloads || 0}
+                </div>
+                <div class="actions">
+                    <button class="install-btn" onclick="installPlugin('${plugin.id}')">Install</button>
+                </div>
+            </div>
+        `;
+        }
+
+        // Plugin action functions
+        window.activatePlugin = async function (pluginName) {
+            try {
+                const response = await fetch(`/api/plugins/${pluginName}/activate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCsrfToken()
+                    }
+                });
+
+                if (response.ok) {
+                    showMessage('Plugin activated successfully', 'success');
+                    loadInstalledPlugins();
+                } else {
+                    const error = await response.json();
+                    showMessage(`Failed to activate plugin: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                showMessage('Failed to activate plugin', 'error');
+                console.error('Error activating plugin:', error);
+            }
+        };
+
+        window.deactivatePlugin = async function (pluginName) {
+            try {
+                const response = await fetch(`/api/plugins/${pluginName}/deactivate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCsrfToken()
+                    }
+                });
+
+                if (response.ok) {
+                    showMessage('Plugin deactivated successfully', 'success');
+                    loadInstalledPlugins();
+                } else {
+                    const error = await response.json();
+                    showMessage(`Failed to deactivate plugin: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                showMessage('Failed to deactivate plugin', 'error');
+                console.error('Error deactivating plugin:', error);
+            }
+        };
+
+        window.installPlugin = async function (pluginId) {
+            try {
+                const response = await fetch(`/api/plugins/marketplace/install/${pluginId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCsrfToken()
+                    }
+                });
+
+                if (response.ok) {
+                    showMessage('Plugin installed successfully', 'success');
+                    loadInstalledPlugins();
+                    loadMarketplacePlugins();
+                } else {
+                    const error = await response.json();
+                    showMessage(`Failed to install plugin: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                showMessage('Failed to install plugin', 'error');
+                console.error('Error installing plugin:', error);
+            }
+        };
+
+        window.uninstallPlugin = async function (pluginName) {
+            if (!confirm(`Are you sure you want to uninstall ${pluginName}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/plugins/${pluginName}/uninstall`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCsrfToken()
+                    }
+                });
+
+                if (response.ok) {
+                    showMessage('Plugin uninstalled successfully', 'success');
+                    loadInstalledPlugins();
+                } else {
+                    const error = await response.json();
+                    showMessage(`Failed to uninstall plugin: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                showMessage('Failed to uninstall plugin', 'error');
+                console.error('Error uninstalling plugin:', error);
+            }
+        };
+
+        window.updatePlugin = async function (pluginName) {
+            try {
+                const response = await fetch(`/api/plugins/${pluginName}/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCsrfToken()
+                    }
+                });
+
+                if (response.ok) {
+                    showMessage('Plugin updated successfully', 'success');
+                    loadInstalledPlugins();
+                } else {
+                    const error = await response.json();
+                    showMessage(`Failed to update plugin: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                showMessage('Failed to update plugin', 'error');
+                console.error('Error updating plugin:', error);
+            }
+        };
+
+        function showMessage(message, type) {
+            messageContainer.innerHTML = `<div class="${type}">${message}</div>`;
+            setTimeout(() => {
+                messageContainer.innerHTML = '';
+            }, 5000);
+        }
+
+        function getCsrfToken() {
+            // Get CSRF token from meta tag or form
+            const token = document.querySelector('meta[name="csrf-token"]');
+            return token ? token.getAttribute('content') : '';
+        }
+    });
+</script>
+{% endblock %}

@@ -1,6 +1,4 @@
-"""
-Unit tests for configuration management module.
-"""
+"""Unit tests for configuration management module."""
 
 import tempfile
 from pathlib import Path

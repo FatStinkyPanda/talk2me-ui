@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}API Documentation - Talk2Me UI{% endblock %}
+
+{% block extra_head %}
+<!-- Swagger UI CSS -->
+<link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui.css" />
+<style>
+    .swagger-ui .topbar {
+        display: none;
+    }
+
+    .swagger-ui .info .title {
+        color: #2c3e50;
+    }
+
+    #swagger-ui {
+        max-width: none;
+        margin: 0;
+    }
+
+    .main-content {
+        padding: 0;
+    }
+
+    .content-wrapper {
+        padding: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="docs-container">
+    <div class="docs-header">
+        <h1>API Documentation</h1>
+        <p class="docs-description">
+            Interactive API documentation for Talk2Me UI. Use this interface to explore all available endpoints,
+            test requests, and understand the API structure.
+        </p>
+        <div class="docs-links">
+            <a href="/openapi.json" class="btn btn-sm btn-outline-primary" target="_blank">
+                View OpenAPI JSON
+            </a>
+            <a href="/redoc" class="btn btn-sm btn-outline-primary" target="_blank">
+                Alternative Documentation (ReDoc)
+            </a>
+        </div>
+    </div>
+
+    <div id="swagger-ui"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Swagger UI JavaScript -->
+<script src="https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui-bundle.js"></script>
+<script src="https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui-standalone-preset.js"></script>
+<script>
+    window.onload = function () {
+        // Initialize Swagger UI
+        const ui = SwaggerUIBundle({
+            url: '/openapi.json',
+            dom_id: '#swagger-ui',
+            deepLinking: true,
+            presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIStandalonePreset
+            ],
+            plugins: [
+                SwaggerUIBundle.plugins.DownloadUrl
+            ],
+            layout: "StandaloneLayout",
+            tryItOutEnabled: true,
+            requestInterceptor: function (request) {
+                // Add CSRF token to requests if available
+                const csrfToken = document.querySelector('meta[name="csrf-token"]');
+                if (csrfToken && (request.method === 'post' || request.method === 'put' || request.method === 'patch' || request.method === 'delete')) {
+                    if (request.headers['Content-Type'] && request.headers['Content-Type'].includes('application/x-www-form-urlencoded')) {
+                        // For form data, add to body
+                        const formData = new URLSearchParams();
+                        if (request.body) {
+                            const existingData = new URLSearchParams(request.body);
+                            for (let [key, value] of existingData) {
+                                formData.append(key, value);
+                            }
+                        }
+                        formData.append('csrf_token', csrfToken.content);
+                        request.body = formData.toString();
+                    } else {
+                        // For JSON, add to headers
+                        request.headers['X-CSRF-Token'] = csrfToken.content;
+                    }
+                }
+                return request;
+            },
+            responseInterceptor: function (response) {
+                // Log responses for debugging
+                console.log('API Response:', response);
+                return response;
+            }
+        });
+
+        // Add custom CSS for better integration
+        const style = document.createElement('style');
+        style.textContent = `
+            .swagger-ui .topbar { display: none !important; }
+            .swagger-ui .info .title { color: #2c3e50 !important; }
+            .swagger-ui .scheme-container { background: #f8f9fa !important; }
+            .docs-container { padding: 20px; }
+            .docs-header { margin-bottom: 30px; text-align: center; }
+            .docs-header h1 { color: #2c3e50; margin-bottom: 10px; }
+            .docs-description { color: #6c757d; font-size: 16px; margin-bottom: 20px; }
+            .docs-links { margin-top: 20px; }
+            .docs-links .btn { margin: 0 5px; }
+        `;
+        document.head.appendChild(style);
+    };
+</script>
+{% endblock %}

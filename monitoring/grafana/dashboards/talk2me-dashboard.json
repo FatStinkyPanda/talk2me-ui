@@ -1,0 +1,134 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Talk2Me UI Monitoring",
+    "tags": ["talk2me", "monitoring"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "HTTP Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{endpoint}} {{status_code}}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "HTTP Request Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Audio Processing Tasks",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(stt_tasks_total[5m])",
+            "legendFormat": "STT {{status}}"
+          },
+          {
+            "expr": "rate(tts_tasks_total[5m])",
+            "legendFormat": "TTS {{status}}"
+          },
+          {
+            "expr": "rate(audiobook_tasks_total[5m])",
+            "legendFormat": "Audiobook {{status}}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 4,
+        "title": "Audio Processing Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(audio_processing_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{task_type}} 95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(audio_processing_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{task_type}} 50th percentile"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      },
+      {
+        "id": 5,
+        "title": "Task Success Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(stt_tasks_total{status=\"completed\"}[5m]) / rate(stt_tasks_total[5m]) * 100",
+            "legendFormat": "STT Success Rate"
+          },
+          {
+            "expr": "rate(tts_tasks_total{status=\"completed\"}[5m]) / rate(tts_tasks_total[5m]) * 100",
+            "legendFormat": "TTS Success Rate"
+          },
+          {
+            "expr": "rate(audiobook_tasks_total{status=\"completed\"}[5m]) / rate(audiobook_tasks_total[5m]) * 100",
+            "legendFormat": "Audiobook Success Rate"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    },
+    "refresh": "5s",
+    "schemaVersion": 27,
+    "version": 0,
+    "links": []
+  }
+}

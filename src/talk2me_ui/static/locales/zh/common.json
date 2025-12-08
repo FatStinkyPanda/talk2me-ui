@@ -1,0 +1,30 @@
+{
+    "status": {
+        "connected": "已连接",
+        "disconnected": "已断开"
+    },
+    "recording": {
+        "recordingStarted": "录音已开始",
+        "recordingStopped": "录音已停止",
+        "startRecording": "录音",
+        "stopRecording": "停止",
+        "clickToStartRecording": "点击开始录音"
+    },
+    "modals": {
+        "error": "错误",
+        "success": "成功",
+        "progress": "进度"
+    },
+    "actions": {
+        "submit": "提交",
+        "cancel": "取消",
+        "close": "关闭",
+        "ok": "确定",
+        "save": "保存",
+        "delete": "删除",
+        "edit": "编辑",
+        "create": "创建",
+        "upload": "上传",
+        "download": "下载"
+    }
+}

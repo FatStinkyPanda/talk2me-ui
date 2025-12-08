@@ -1,5 +1,4 @@
-"""
-API client for Talk2Me backend communication.
+"""API client for Talk2Me backend communication.
 
 This module provides a client class for interacting with the Talk2Me backend API,
 including methods for speech-to-text, text-to-speech, voice management, and media
@@ -7,7 +6,7 @@ resource handling.
 """
 
 import logging
-from typing import Any, BinaryIO
+from typing import Any, BinaryIO, cast
 from urllib.parse import urljoin
 
 import requests
@@ -18,16 +17,14 @@ logger = logging.getLogger("talk2me_ui.api_client")
 
 
 class Talk2MeAPIClient:
-    """
-    Client for interacting with the Talk2Me backend API.
+    """Client for interacting with the Talk2Me backend API.
 
     Provides methods for all backend endpoints with proper error handling,
     response parsing, and file upload support.
     """
 
     def __init__(self, base_url: str | None = None):
-        """
-        Initialize the API client.
+        """Initialize the API client.
 
         Args:
             base_url: Base URL for the backend API. If None, uses config.
@@ -41,8 +38,7 @@ class Talk2MeAPIClient:
         logger.info("API client initialized", extra={"base_url": self.base_url})
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
-        """
-        Make an HTTP request to the backend API.
+        """Make an HTTP request to the backend API.
 
         Args:
             method: HTTP method (GET, POST, etc.)
@@ -84,8 +80,7 @@ class Talk2MeAPIClient:
             raise requests.RequestException(f"API request failed: {e}") from e
 
     def _parse_json_response(self, response: requests.Response) -> Any:
-        """
-        Parse JSON response from the API.
+        """Parse JSON response from the API.
 
         Args:
             response: Response object
@@ -102,8 +97,7 @@ class Talk2MeAPIClient:
             raise ValueError(f"Invalid JSON response: {e}") from e
 
     def health_check(self) -> dict[str, Any]:
-        """
-        Check the health status of the backend API.
+        """Check the health status of the backend API.
 
         Returns:
             Health check response data
@@ -113,13 +107,12 @@ class Talk2MeAPIClient:
             ValueError: For invalid responses
         """
         response = self._make_request("GET", "/")
-        return self._parse_json_response(response)
+        return cast(dict[str, Any], self._parse_json_response(response))
 
     def stt_transcribe(
         self, audio_file: BinaryIO, sample_rate: int | None = None
     ) -> dict[str, Any]:
-        """
-        Transcribe speech from an audio file.
+        """Transcribe speech from an audio file.
 
         Args:
             audio_file: Binary file-like object containing audio data
@@ -139,15 +132,14 @@ class Talk2MeAPIClient:
             params["sample_rate"] = sample_rate
 
         response = self._make_request("POST", "/stt", files=files, params=params)
-        result = self._parse_json_response(response)
+        result = cast(dict[str, Any], self._parse_json_response(response))
         logger.info(
             "STT transcription completed", extra={"text_length": len(result.get("text", ""))}
         )
         return result
 
     def tts_synthesize(self, text: str, voice: str, **kwargs) -> bytes:
-        """
-        Synthesize speech from text using a specific voice.
+        """Synthesize speech from text using a specific voice.
 
         Args:
             text: Text to synthesize
@@ -172,15 +164,14 @@ class Talk2MeAPIClient:
         response = self._make_request("POST", "/tts", json=data)
 
         # Return raw audio bytes
-        audio_data = response.content
+        audio_data = cast(bytes, response.content)
         logger.info(
             "TTS synthesis completed", extra={"voice": voice, "audio_size": len(audio_data)}
         )
         return audio_data
 
     def tts_synthesize_async(self, text: str, voice: str, **kwargs) -> dict[str, Any]:
-        """
-        Start asynchronous speech synthesis from text.
+        """Start asynchronous speech synthesis from text.
 
         Args:
             text: Text to synthesize
@@ -199,11 +190,10 @@ class Talk2MeAPIClient:
 
         data = {"text": text, "voice": voice, **kwargs}
         response = self._make_request("POST", "/tts/async", json=data)
-        return self._parse_json_response(response)
+        return cast(dict[str, Any], self._parse_json_response(response))
 
     def tts_get_status(self, task_id: str) -> dict[str, Any]:
-        """
-        Get the status of an asynchronous TTS task.
+        """Get the status of an asynchronous TTS task.
 
         Args:
             task_id: Task identifier
@@ -216,11 +206,10 @@ class Talk2MeAPIClient:
             ValueError: For invalid responses
         """
         response = self._make_request("GET", f"/tts/status/{task_id}")
-        return self._parse_json_response(response)
+        return cast(dict[str, Any], self._parse_json_response(response))
 
     def list_voices(self) -> dict[str, Any]:
-        """
-        List all available voices.
+        """List all available voices.
 
         Returns:
             Response containing list of voices
@@ -230,13 +219,12 @@ class Talk2MeAPIClient:
             ValueError: For invalid responses
         """
         response = self._make_request("GET", "/voices")
-        return self._parse_json_response(response)
+        return cast(dict[str, Any], self._parse_json_response(response))
 
     def create_voice(
         self, name: str, language: str = "en", samples: list[BinaryIO] | None = None
     ) -> dict[str, Any]:
-        """
-        Create a new voice profile.
+        """Create a new voice profile.
 
         Args:
             name: Display name for the voice
@@ -254,20 +242,18 @@ class Talk2MeAPIClient:
             raise ValueError("Voice name cannot be empty")
 
         data = {"name": name, "language": language}
-        files = {}
+        files = []
 
         if samples:
-            for _i, sample in enumerate(samples):
-                files["samples"] = sample  # FastAPI expects multiple files with same key
+            files = [("samples", sample) for sample in samples]
 
         response = self._make_request("POST", "/voices", data=data, files=files)
-        return self._parse_json_response(response)
+        return cast(dict[str, Any], self._parse_json_response(response))
 
     def update_voice(
         self, voice_id: str, name: str | None = None, language: str | None = None
     ) -> dict[str, Any]:
-        """
-        Update a voice profile.
+        """Update a voice profile.
 
         Args:
             voice_id: Identifier of the voice to update
@@ -294,11 +280,10 @@ class Talk2MeAPIClient:
             raise ValueError("At least one field must be provided for update")
 
         response = self._make_request("PUT", f"/voices/{voice_id}", json=data)
-        return self._parse_json_response(response)
+        return cast(dict[str, Any], self._parse_json_response(response))
 
     def delete_voice(self, voice_id: str) -> dict[str, Any]:
-        """
-        Delete a voice profile.
+        """Delete a voice profile.
 
         Args:
             voice_id: Identifier of the voice to delete
@@ -314,11 +299,10 @@ class Talk2MeAPIClient:
             raise ValueError("Voice ID cannot be empty")
 
         response = self._make_request("DELETE", f"/voices/{voice_id}")
-        return self._parse_json_response(response)
+        return cast(dict[str, Any], self._parse_json_response(response))
 
     def clone_voice(self, voice_id: str, samples: list[BinaryIO]) -> dict[str, Any]:
-        """
-        Clone an existing voice by adding new samples.
+        """Clone an existing voice by adding new samples.
 
         Args:
             voice_id: Identifier of the voice to clone/extend
@@ -336,16 +320,13 @@ class Talk2MeAPIClient:
         if not samples:
             raise ValueError("At least one sample file is required")
 
-        files = {}
-        for _i, sample in enumerate(samples):
-            files["samples"] = sample
+        files = [("samples", sample) for sample in samples]
 
         response = self._make_request("POST", f"/voices/{voice_id}/samples", files=files)
-        return self._parse_json_response(response)
+        return cast(dict[str, Any], self._parse_json_response(response))
 
     def generate_audiobook(self, text: str, voice: str, **kwargs) -> bytes:
-        """
-        Generate an audiobook from text.
+        """Generate an audiobook from text.
 
         Args:
             text: Full text content for the audiobook
@@ -365,11 +346,10 @@ class Talk2MeAPIClient:
         data = {"text": text, "voice": voice, **kwargs}
         response = self._make_request("POST", "/audiobook", json=data)
 
-        return response.content
+        return cast(bytes, response.content)
 
     def list_sound_effects(self) -> dict[str, Any]:
-        """
-        List all available sound effects.
+        """List all available sound effects.
 
         Returns:
             Response containing list of sound effects
@@ -379,11 +359,10 @@ class Talk2MeAPIClient:
             ValueError: For invalid responses
         """
         response = self._make_request("GET", "/sound-effects")
-        return self._parse_json_response(response)
+        return cast(dict[str, Any], self._parse_json_response(response))
 
     def upload_sound_effect(self, name: str, audio_file: BinaryIO, **metadata) -> dict[str, Any]:
-        """
-        Upload a new sound effect.
+        """Upload a new sound effect.
 
         Args:
             name: Name/identifier for the sound effect
@@ -404,11 +383,10 @@ class Talk2MeAPIClient:
         files = {"file": audio_file}
 
         response = self._make_request("POST", "/sound-effects", data=data, files=files)
-        return self._parse_json_response(response)
+        return cast(dict[str, Any], self._parse_json_response(response))
 
     def list_background_audio(self) -> dict[str, Any]:
-        """
-        List all available background audio tracks.
+        """List all available background audio tracks.
 
         Returns:
             Response containing list of background audio
@@ -418,13 +396,12 @@ class Talk2MeAPIClient:
             ValueError: For invalid responses
         """
         response = self._make_request("GET", "/background-audio")
-        return self._parse_json_response(response)
+        return cast(dict[str, Any], self._parse_json_response(response))
 
     def upload_background_audio(
         self, name: str, audio_file: BinaryIO, **metadata
     ) -> dict[str, Any]:
-        """
-        Upload a new background audio track.
+        """Upload a new background audio track.
 
         Args:
             name: Name/identifier for the background audio
@@ -445,4 +422,4 @@ class Talk2MeAPIClient:
         files = {"file": audio_file}
 
         response = self._make_request("POST", "/background-audio", data=data, files=files)
-        return self._parse_json_response(response)
+        return cast(dict[str, Any], self._parse_json_response(response))

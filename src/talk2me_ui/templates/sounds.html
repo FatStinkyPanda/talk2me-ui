@@ -36,7 +36,7 @@
                         <label for="sfx-id" class="form-label">Effect ID *</label>
                         <input type="text" id="sfx-id" name="id" class="form-input" required pattern="[a-zA-Z0-9_]+"
                             placeholder="e.g., door_creak">
-                        <div class="form-help">Unique identifier used in {{{sfx:id}}} markup</div>
+                        <div class="form-help">Unique identifier used in {% raw %}{{{sfx:id}}}{% endraw %} markup</div>
                     </div>
 
                     <div class="form-group">
@@ -164,7 +164,7 @@
                         <label for="bg-id" class="form-label">Audio ID *</label>
                         <input type="text" id="bg-id" name="id" class="form-input" required pattern="[a-zA-Z0-9_]+"
                             placeholder="e.g., forest_ambient">
-                        <div class="form-help">Unique identifier used in {{{bg:id}}} markup</div>
+                        <div class="form-help">Unique identifier used in {% raw %}{{{bg:id}}}{% endraw %} markup</div>
                     </div>
 
                     <div class="form-group">
@@ -271,7 +271,14 @@
 
 {% block extra_scripts %}
 <script>
+    {% raw %}
     let currentTab = 'effects';
+    let sfxPage = 1;
+    let bgPage = 1;
+    let sfxHasMore = true;
+    let bgHasMore = true;
+    let sfxLoading = false;
+    let bgLoading = false;
 
     document.addEventListener('DOMContentLoaded', function () {
         // Load sound libraries
@@ -284,6 +291,9 @@
 
         // Initialize filters
         initializeFilters();
+
+        // Initialize lazy loading
+        initializeLazyLoading();
     });
 
     function switchTab(tab) {
@@ -372,6 +382,50 @@
         document.getElementById('bg-search').addEventListener('input', filterBackgroundAudio);
     }
 
+    function initializeLazyLoading() {
+        // Add scroll listeners for infinite scroll
+        const sfxContainer = document.getElementById('sound-effects-grid');
+        const bgContainer = document.getElementById('background-audio-grid');
+
+        // Create intersection observer for lazy loading
+        const observerOptions = {
+            root: null,
+            rootMargin: '100px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const target = entry.target;
+                    if (target.classList.contains('load-more-btn')) {
+                        if (target.textContent.includes('Sound Effects')) {
+                            loadSoundEffects(true);
+                        } else if (target.textContent.includes('Background Audio')) {
+                            loadBackgroundAudio(true);
+                        }
+                    }
+                }
+            });
+        }, observerOptions);
+
+        // Observe load more buttons when they exist
+        const observeLoadMore = () => {
+            const loadMoreBtns = document.querySelectorAll('.load-more-btn');
+            loadMoreBtns.forEach(btn => observer.observe(btn));
+        };
+
+        // Re-observe when content changes
+        const mutationObserver = new MutationObserver(() => {
+            observeLoadMore();
+        });
+
+        mutationObserver.observe(sfxContainer, { childList: true });
+        mutationObserver.observe(bgContainer, { childList: true });
+
+        observeLoadMore();
+    }
+
     async function handleSFXUpload(event) {
         event.preventDefault();
 
@@ -395,6 +449,9 @@
             showSuccess('Sound effect added successfully!');
 
             form.reset();
+            // Reset pagination and reload
+            sfxPage = 1;
+            sfxHasMore = true;
             loadSoundEffects();
 
         } catch (error) {
@@ -427,6 +484,9 @@
             showSuccess('Background audio added successfully!');
 
             form.reset();
+            // Reset pagination and reload
+            bgPage = 1;
+            bgHasMore = true;
             loadBackgroundAudio();
 
         } catch (error) {
@@ -436,38 +496,64 @@
         }
     }
 
-    async function loadSoundEffects() {
+    async function loadSoundEffects(append = false) {
+        if (sfxLoading) return;
+        sfxLoading = true;
+
         try {
-            const response = await fetch('/api/sounds/effects');
+            const response = await fetch(`/api/sounds/effects?page=${sfxPage}&limit=20`);
             if (!response.ok) throw new Error('Failed to load sound effects');
 
-            const effects = await response.json();
-            renderSoundEffects(effects);
+            const data = await response.json();
+            sfxHasMore = data.has_more;
+
+            if (append) {
+                renderSoundEffects(data.items, true);
+            } else {
+                renderSoundEffects(data.items, false);
+            }
+
+            sfxPage++;
 
         } catch (error) {
             console.error('Failed to load sound effects:', error);
             showError('Failed to load sound effects');
+        } finally {
+            sfxLoading = false;
         }
     }
 
-    async function loadBackgroundAudio() {
+    async function loadBackgroundAudio(append = false) {
+        if (bgLoading) return;
+        bgLoading = true;
+
         try {
-            const response = await fetch('/api/sounds/background');
+            const response = await fetch(`/api/sounds/background?page=${bgPage}&limit=20`);
             if (!response.ok) throw new Error('Failed to load background audio');
 
-            const audio = await response.json();
-            renderBackgroundAudio(audio);
+            const data = await response.json();
+            bgHasMore = data.has_more;
+
+            if (append) {
+                renderBackgroundAudio(data.items, true);
+            } else {
+                renderBackgroundAudio(data.items, false);
+            }
+
+            bgPage++;
 
         } catch (error) {
             console.error('Failed to load background audio:', error);
             showError('Failed to load background audio');
+        } finally {
+            bgLoading = false;
         }
     }
 
-    function renderSoundEffects(effects) {
+    function renderSoundEffects(effects, append = false) {
         const container = document.getElementById('sound-effects-grid');
 
-        if (effects.length === 0) {
+        if (!append && effects.length === 0) {
             container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">🔊</div>
@@ -478,7 +564,11 @@
             return;
         }
 
-        container.innerHTML = effects.map(effect => `
+        if (!append) {
+            container.innerHTML = '';
+        }
+
+        const html = effects.map(effect => `
         <div class="sound-item">
             <div class="sound-header">
                 <div class="sound-name">${escapeHtml(effect.name)}</div>
@@ -489,24 +579,39 @@
                 <span class="sound-volume">Vol: ${effect.volume || 0.8}</span>
             </div>
             <div class="sound-controls">
-                <button class="btn btn-sm btn-outline" onclick="previewSound('${effect.id}', 'sfx')">
+                <button class="btn btn-sm btn-outline" onclick="previewSound('${effect.id}', 'effects')">
                     <span>▶️</span> Preview
                 </button>
-                <button class="btn btn-sm btn-secondary" onclick="editSound('${effect.id}', 'sfx')">
+                <button class="btn btn-sm btn-secondary" onclick="editSound('${effect.id}', 'effects')">
                     Edit
                 </button>
-                <button class="btn btn-sm btn-danger" onclick="deleteSound('${effect.id}', 'sfx')">
+                <button class="btn btn-sm btn-danger" onclick="deleteSound('${effect.id}', 'effects')">
                     Delete
                 </button>
             </div>
         </div>
     `).join('');
+
+        if (append) {
+            container.insertAdjacentHTML('beforeend', html);
+        } else {
+            container.innerHTML = html;
+        }
+
+        // Add load more button if there are more items
+        if (sfxHasMore && !append) {
+            const loadMoreBtn = document.createElement('button');
+            loadMoreBtn.className = 'btn btn-secondary load-more-btn';
+            loadMoreBtn.textContent = 'Load More Sound Effects';
+            loadMoreBtn.onclick = () => loadSoundEffects(true);
+            container.appendChild(loadMoreBtn);
+        }
     }
 
-    function renderBackgroundAudio(audioList) {
+    function renderBackgroundAudio(audioList, append = false) {
         const container = document.getElementById('background-audio-grid');
 
-        if (audioList.length === 0) {
+        if (!append && audioList.length === 0) {
             container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">🎵</div>
@@ -517,7 +622,11 @@
             return;
         }
 
-        container.innerHTML = audioList.map(audio => `
+        if (!append) {
+            container.innerHTML = '';
+        }
+
+        const html = audioList.map(audio => `
         <div class="sound-item">
             <div class="sound-header">
                 <div class="sound-name">${escapeHtml(audio.name)}</div>
@@ -529,52 +638,57 @@
                 ${audio.loop ? '<span class="badge badge-warning">Loop</span>' : ''}
             </div>
             <div class="sound-controls">
-                <button class="btn btn-sm btn-outline" onclick="previewSound('${audio.id}', 'bg')">
+                <button class="btn btn-sm btn-outline" onclick="previewSound('${audio.id}', 'background')">
                     <span>▶️</span> Preview
                 </button>
-                <button class="btn btn-sm btn-secondary" onclick="editSound('${audio.id}', 'bg')">
+                <button class="btn btn-sm btn-secondary" onclick="editSound('${audio.id}', 'background')">
                     Edit
                 </button>
-                <button class="btn btn-sm btn-danger" onclick="deleteSound('${audio.id}', 'bg')">
+                <button class="btn btn-sm btn-danger" onclick="deleteSound('${audio.id}', 'background')">
                     Delete
                 </button>
             </div>
         </div>
     `).join('');
+
+        if (append) {
+            container.insertAdjacentHTML('beforeend', html);
+        } else {
+            container.innerHTML = html;
+        }
+
+        // Add load more button if there are more items
+        if (bgHasMore && !append) {
+            const loadMoreBtn = document.createElement('button');
+            loadMoreBtn.className = 'btn btn-secondary load-more-btn';
+            loadMoreBtn.textContent = 'Load More Background Audio';
+            loadMoreBtn.onclick = () => loadBackgroundAudio(true);
+            container.appendChild(loadMoreBtn);
+        }
     }
 
     function filterSoundEffects() {
         const categoryFilter = document.getElementById('sfx-category-filter').value.toLowerCase();
         const searchFilter = document.getElementById('sfx-search').value.toLowerCase();
 
-        const items = document.querySelectorAll('#sound-effects-grid .sound-item');
+        // Reset pagination when filtering
+        sfxPage = 1;
+        sfxHasMore = true;
 
-        items.forEach(item => {
-            const name = item.querySelector('.sound-name').textContent.toLowerCase();
-            const category = item.querySelector('.badge').textContent.toLowerCase();
-
-            const matchesCategory = !categoryFilter || category.includes(categoryFilter);
-            const matchesSearch = !searchFilter || name.includes(searchFilter);
-
-            item.style.display = matchesCategory && matchesSearch ? 'block' : 'none';
-        });
+        // Reload with filters applied
+        loadSoundEffects(false);
     }
 
     function filterBackgroundAudio() {
         const typeFilter = document.getElementById('bg-type-filter').value.toLowerCase();
         const searchFilter = document.getElementById('bg-search').value.toLowerCase();
 
-        const items = document.querySelectorAll('#background-audio-grid .sound-item');
+        // Reset pagination when filtering
+        bgPage = 1;
+        bgHasMore = true;
 
-        items.forEach(item => {
-            const name = item.querySelector('.sound-name').textContent.toLowerCase();
-            const type = item.querySelector('.badge').textContent.toLowerCase();
-
-            const matchesType = !typeFilter || type.includes(typeFilter);
-            const matchesSearch = !searchFilter || name.includes(searchFilter);
-
-            item.style.display = matchesType && matchesSearch ? 'block' : 'none';
-        });
+        // Reload with filters applied
+        loadBackgroundAudio(false);
     }
 
     function previewSound(id, type) {
@@ -823,9 +937,13 @@
 
             showSuccess('Sound deleted successfully');
 
-            if (type === 'sfx') {
+            if (type === 'effects') {
+                sfxPage = 1;
+                sfxHasMore = true;
                 loadSoundEffects();
             } else {
+                bgPage = 1;
+                bgHasMore = true;
                 loadBackgroundAudio();
             }
 
@@ -850,5 +968,6 @@
         div.textContent = text;
         return div.innerHTML;
     }
+    {% endraw %}
 </script>
 {% endblock %}

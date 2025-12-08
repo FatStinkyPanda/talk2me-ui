@@ -1,0 +1,74 @@
+{
+    "app": {
+        "name": "Talk2Me UI",
+        "description": "现代化的AI驱动对话和音频处理Web界面"
+    },
+    "nav": {
+        "dashboard": "仪表板",
+        "voiceManagement": "语音管理",
+        "speechToText": "语音转文字",
+        "textToSpeech": "文字转语音",
+        "audiobookStudio": "有声书工作室",
+        "soundLibrary": "音效库",
+        "liveConversation": "实时对话",
+        "apiDocs": "API文档",
+        "settings": "设置"
+    },
+    "auth": {
+        "login": "登录",
+        "logout": "登出",
+        "register": "注册",
+        "username": "用户名",
+        "email": "邮箱",
+        "password": "密码",
+        "confirmPassword": "确认密码",
+        "usernameOrEmail": "用户名或邮箱",
+        "loginToTalk2Me": "登录Talk2Me",
+        "dontHaveAccount": "还没有账户？",
+        "registerHere": "在此注册",
+        "welcome": "欢迎，%(username)s",
+        "invalidCredentials": "无效凭据",
+        "passwordsDontMatch": "密码不匹配",
+        "passwordTooShort": "密码至少需要8个字符",
+        "registrationSuccessful": "注册成功",
+        "loginSuccessful": "登录成功"
+    },
+    "status": {
+        "checking": "检查中...",
+        "connected": "已连接",
+        "disconnected": "已断开",
+        "processing": "处理中...",
+        "completed": "已完成",
+        "failed": "失败"
+    },
+    "actions": {
+        "submit": "提交",
+        "cancel": "取消",
+        "close": "关闭",
+        "ok": "确定",
+        "save": "保存",
+        "delete": "删除",
+        "edit": "编辑",
+        "create": "创建",
+        "upload": "上传",
+        "download": "下载"
+    },
+    "sidebar": {
+        "quickActions": "快捷操作",
+        "newTTS": "新建TTS",
+        "createVoice": "创建语音",
+        "newAudiobook": "新建有声书",
+        "addSound": "添加音效",
+        "recentActivity": "最近活动",
+        "noRecentActivity": "无最近活动",
+        "systemInfo": "系统信息",
+        "voices": "语音：",
+        "projects": "项目：",
+        "storage": "存储："
+    },
+    "modals": {
+        "error": "错误",
+        "success": "成功",
+        "progress": "进度"
+    }
+}

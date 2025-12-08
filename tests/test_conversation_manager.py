@@ -1,6 +1,4 @@
-"""
-Unit tests for conversation manager WebSocket handling.
-"""
+"""Unit tests for conversation manager WebSocket handling."""
 
 import asyncio
 import json
@@ -9,6 +7,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from websockets.exceptions import ConnectionClosedError
 
+from talk2me_ui.api_client import Talk2MeAPIClient
 from talk2me_ui.conversation_manager import (
     ConversationManager,
     ConversationSession,
@@ -23,6 +22,14 @@ class TestConversationManager:
     def manager(self):
         """Create conversation manager instance."""
         return ConversationManager(backend_url="ws://test-backend.com/ws")
+
+    def test_init_without_backend_url(self):
+        """Test initialization without backend URL (uses config)."""
+        with patch("talk2me_ui.conversation_manager.get_config") as mock_config:
+            mock_config.return_value.backend.url = "http://backend.com"
+            manager = ConversationManager()
+            assert manager.backend_url == "ws://backend.com/ws"
+            assert isinstance(manager.api_client, Talk2MeAPIClient)
 
     @pytest.mark.asyncio
     @patch("talk2me_ui.conversation_manager.websockets.connect")
@@ -255,6 +262,20 @@ class TestConversationSession:
         assert session.backend_ws is None
 
     @pytest.mark.asyncio
+    async def test_start_session_backend_connection_failure(self, session):
+        """Test starting session with backend connection failure."""
+        session.backend_url = "ws://bad-url.com/ws"
+
+        with patch(
+            "talk2me_ui.conversation_manager.websockets.connect",
+            side_effect=Exception("Connection failed"),
+        ):
+            await session.start()
+
+            assert session.is_active is True
+            assert session.backend_ws is None
+
+    @pytest.mark.asyncio
     async def test_stop_session(self, session):
         """Test stopping a conversation session."""
         mock_backend_ws = AsyncMock()
@@ -323,9 +344,13 @@ class TestConversationSession:
     @pytest.mark.asyncio
     async def test_listen_to_backend_tts_audio(self, session):
         """Test listening for TTS audio messages."""
+        import base64
+
         session.backend_ws = AsyncMock()
+        audio_data = b"audio data"
+        encoded_audio = base64.b64encode(audio_data).decode("utf-8")
         session.backend_ws.recv.return_value = json.dumps(
-            {"type": "tts_audio", "audio": b"audio data"}
+            {"type": "tts_audio", "audio": encoded_audio}
         )
         session.is_active = True
 
@@ -335,7 +360,7 @@ class TestConversationSession:
             await session._listen_to_backend()
 
         session._send_to_frontend.assert_called_once_with(
-            {"type": "tts_audio", "audio": b"audio data"}
+            {"type": "tts_audio", "audio": encoded_audio}
         )
 
     @pytest.mark.asyncio

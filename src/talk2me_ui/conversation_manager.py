@@ -1,5 +1,4 @@
-"""
-Conversation manager for real-time WebSocket communication.
+"""Conversation manager for real-time WebSocket communication.
 
 This module handles the coordination between frontend WebSocket connections
 and the Talk2Me backend WebSocket for real-time audio streaming, STT/TTS processing,
@@ -22,16 +21,14 @@ logger = logging.getLogger("talk2me_ui.conversation_manager")
 
 
 class ConversationManager:
-    """
-    Manages real-time conversations via WebSocket connections.
+    """Manages real-time conversations via WebSocket connections.
 
     Coordinates between frontend clients and the Talk2Me backend WebSocket
     for bidirectional audio streaming and real-time processing.
     """
 
     def __init__(self, backend_url: str | None = None):
-        """
-        Initialize the conversation manager.
+        """Initialize the conversation manager.
 
         Args:
             backend_url: URL of the Talk2Me backend WebSocket endpoint
@@ -59,8 +56,7 @@ class ConversationManager:
         logger.info("Conversation manager initialized", extra={"backend_url": self.backend_url})
 
     async def start_conversation(self, websocket: websockets.WebSocketServerProtocol) -> str:
-        """
-        Start a new conversation session.
+        """Start a new conversation session.
 
         Args:
             websocket: Frontend WebSocket connection
@@ -92,8 +88,7 @@ class ConversationManager:
         return conversation_id
 
     async def end_conversation(self, conversation_id: str):
-        """
-        End a conversation session.
+        """End a conversation session.
 
         Args:
             conversation_id: ID of the conversation to end
@@ -117,8 +112,7 @@ class ConversationManager:
     async def handle_frontend_message(
         self, conversation_id: str, _websocket: websockets.WebSocketServerProtocol, message: str
     ):
-        """
-        Handle a message from a frontend client.
+        """Handle a message from a frontend client.
 
         Args:
             conversation_id: ID of the conversation
@@ -192,15 +186,12 @@ class ConversationManager:
 
 
 class ConversationSession:
-    """
-    Represents a single conversation session with the backend.
-    """
+    """Represents a single conversation session with the backend."""
 
     def __init__(
         self, conversation_id: str, backend_url: str | None, manager: "ConversationManager"
     ):
-        """
-        Initialize a conversation session.
+        """Initialize a conversation session.
 
         Args:
             conversation_id: Unique conversation identifier

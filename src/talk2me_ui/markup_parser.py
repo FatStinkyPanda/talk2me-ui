@@ -1,5 +1,4 @@
-"""
-Markup parser for Talk2Me audiobook generation.
+"""Markup parser for Talk2Me audiobook generation.
 
 This module provides functionality to parse triple-brace markup syntax
 used in audiobook text, extracting sections with voice assignments,
@@ -9,7 +8,7 @@ sound effects, and background audio.
 import contextlib
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 logger = logging.getLogger("talk2me_ui.markup_parser")
@@ -21,12 +20,8 @@ class MarkupSection:
 
     text: str
     voice: str | None = None
-    sound_effects: list[dict[str, Any]] | None = None
+    sound_effects: list[dict[str, Any]] = field(default_factory=list)
     background_audio: dict[str, Any] | None = None
-
-    def __post_init__(self):
-        if self.sound_effects is None:
-            self.sound_effects = []
 
 
 class AudiobookMarkupError(Exception):
@@ -36,8 +31,7 @@ class AudiobookMarkupError(Exception):
 
 
 class AudiobookMarkupParser:
-    """
-    Parser for triple-brace audiobook markup syntax.
+    """Parser for triple-brace audiobook markup syntax.
 
     Syntax:
     {{{voice:voice_name}}}
@@ -55,8 +49,7 @@ class AudiobookMarkupParser:
         self.current_sfx: list[dict[str, Any]] = []
 
     def parse(self, text: str) -> list[MarkupSection]:
-        """
-        Parse the markup text into sections.
+        """Parse the markup text into sections.
 
         Args:
             text: The text containing markup
@@ -114,8 +107,7 @@ class AudiobookMarkupParser:
         return sections
 
     def _parse_markup(self, markup: str) -> None:
-        """
-        Parse a single markup tag.
+        """Parse a single markup tag.
 
         Args:
             markup: The markup content (without braces)
@@ -158,8 +150,7 @@ class AudiobookMarkupParser:
             raise AudiobookMarkupError(f"Unknown markup command: {command}")
 
     def validate_markup(self, text: str) -> list[str]:
-        """
-        Validate markup syntax and return any issues found.
+        """Validate markup syntax and return any issues found.
 
         Args:
             text: The text to validate
@@ -191,8 +182,7 @@ class AudiobookMarkupParser:
 
 
 def parse_audiobook_markup(text: str) -> list[MarkupSection]:
-    """
-    Convenience function to parse audiobook markup.
+    """Convenience function to parse audiobook markup.
 
     Args:
         text: The markup text to parse
@@ -205,8 +195,7 @@ def parse_audiobook_markup(text: str) -> list[MarkupSection]:
 
 
 def validate_audiobook_markup(text: str) -> list[str]:
-    """
-    Convenience function to validate audiobook markup.
+    """Convenience function to validate audiobook markup.
 
     Args:
         text: The markup text to validate
