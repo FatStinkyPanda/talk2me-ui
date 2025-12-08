@@ -1,10 +1,7 @@
 """Tests for memory monitoring and management functionality."""
 
-import gc
 import time
 from unittest.mock import Mock, patch
-
-import pytest
 
 from src.talk2me_ui.memory_monitor import (
     MemoryMonitor,
@@ -32,8 +29,14 @@ class TestMemoryMonitor:
 
         # Check that all expected fields are present
         expected_fields = [
-            'total_memory', 'available_memory', 'used_memory', 'memory_percent',
-            'process_memory', 'process_memory_percent', 'gc_stats', 'object_counts'
+            "total_memory",
+            "available_memory",
+            "used_memory",
+            "memory_percent",
+            "process_memory",
+            "process_memory_percent",
+            "gc_stats",
+            "object_counts",
         ]
 
         for field in expected_fields:
@@ -70,14 +73,14 @@ class TestMemoryMonitor:
         assert isinstance(leaks, list)
 
         # Simulate leak by modifying baseline
-        monitor.baseline_objects = {'test_object': 0}
-        monitor._get_object_counts = Mock(return_value={'test_object': 100})
+        monitor.baseline_objects = {"test_object": 0}
+        monitor._get_object_counts = Mock(return_value={"test_object": 100})
 
         leaks = monitor.check_for_memory_leaks()
         assert len(leaks) > 0
-        assert 'test_object' in leaks[0]
+        assert "test_object" in leaks[0]
 
-    @patch('src.talk2me_ui.memory_monitor.time.sleep')
+    @patch("src.talk2me_ui.memory_monitor.time.sleep")
     def test_monitoring_loop(self, mock_sleep):
         """Test the monitoring loop."""
         monitor = MemoryMonitor(check_interval=0.1)
@@ -115,8 +118,14 @@ class TestMemoryMonitorFunctions:
         stats = get_memory_stats()
 
         expected_fields = [
-            'total_memory', 'available_memory', 'used_memory', 'memory_percent',
-            'process_memory', 'process_memory_percent', 'gc_stats', 'object_counts'
+            "total_memory",
+            "available_memory",
+            "used_memory",
+            "memory_percent",
+            "process_memory",
+            "process_memory_percent",
+            "gc_stats",
+            "object_counts",
         ]
 
         for field in expected_fields:
@@ -136,7 +145,7 @@ class TestMemoryMonitorFunctions:
 class TestMemoryTracker:
     """Test memory tracker context manager."""
 
-    @patch('src.talk2me_ui.memory_monitor.MemoryMonitor')
+    @patch("src.talk2me_ui.memory_monitor.MemoryMonitor")
     def test_memory_tracker_context(self, mock_monitor_class):
         """Test memory tracker context manager."""
         mock_monitor = Mock()

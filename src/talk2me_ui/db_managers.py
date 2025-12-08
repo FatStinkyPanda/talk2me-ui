@@ -6,23 +6,20 @@ with SQLAlchemy database operations.
 
 import logging
 from datetime import datetime, timedelta
-from typing import List, Optional
 from uuid import uuid4
 
-from sqlalchemy.orm import Session
-
 from .database import (
-    SessionLocal,
-    User as DBUser,
-    Session as DBSession,
-    Role,
     Permission,
+    Role,
     RolePermission,
-    Project,
+    SessionLocal,
     Sound,
-    Voice,
-    ConversationSession,
-    Message,
+)
+from .database import (
+    Session as DBSession,
+)
+from .database import (
+    User as DBUser,
 )
 
 logger = logging.getLogger(__name__)
@@ -36,20 +33,25 @@ class DatabaseUserManager:
         db = SessionLocal()
         try:
             # Check if user exists
-            if db.query(DBUser).filter(
-                (DBUser.username == username) | (DBUser.email == email)
-            ).first():
+            if (
+                db.query(DBUser)
+                .filter((DBUser.username == username) | (DBUser.email == email))
+                .first()
+            ):
                 raise ValueError("Username or email already exists")
 
             # Hash password
             from .auth import UserManager as FileUserManager
+
             password_hash = FileUserManager._hash_password(password)
 
             # Default to 'user' role if not specified
             if role_id is None:
                 user_role = db.query(Role).filter(Role.name == "user").first()
                 if not user_role:
-                    raise ValueError("Default 'user' role not found. Please initialize roles first.")
+                    raise ValueError(
+                        "Default 'user' role not found. Please initialize roles first."
+                    )
                 role_id = user_role.id
 
             user = DBUser(
@@ -67,13 +69,13 @@ class DatabaseUserManager:
             logger.info(f"Created user: {username}")
             return user
 
-        except Exception as e:
+        except Exception:
             db.rollback()
             raise
         finally:
             db.close()
 
-    def get_user_by_id(self, user_id: str) -> Optional[DBUser]:
+    def get_user_by_id(self, user_id: str) -> DBUser | None:
         """Get user by ID."""
         db = SessionLocal()
         try:
@@ -81,7 +83,7 @@ class DatabaseUserManager:
         finally:
             db.close()
 
-    def get_user_by_username(self, username: str) -> Optional[DBUser]:
+    def get_user_by_username(self, username: str) -> DBUser | None:
         """Get user by username."""
         db = SessionLocal()
         try:
@@ -89,7 +91,7 @@ class DatabaseUserManager:
         finally:
             db.close()
 
-    def get_user_by_email(self, email: str) -> Optional[DBUser]:
+    def get_user_by_email(self, email: str) -> DBUser | None:
         """Get user by email."""
         db = SessionLocal()
         try:
@@ -97,19 +99,22 @@ class DatabaseUserManager:
         finally:
             db.close()
 
-    def authenticate_user(self, username_or_email: str, password: str) -> Optional[DBUser]:
+    def authenticate_user(self, username_or_email: str, password: str) -> DBUser | None:
         """Authenticate user."""
         db = SessionLocal()
         try:
-            user = db.query(DBUser).filter(
-                (DBUser.username == username_or_email) | (DBUser.email == email)
-            ).first()
+            user = (
+                db.query(DBUser)
+                .filter((DBUser.username == username_or_email) | (DBUser.email == email))
+                .first()
+            )
 
             if not user or not user.is_active:
                 return None
 
             # Verify password
             from .auth import UserManager as FileUserManager
+
             if not FileUserManager._verify_password(password, user.password_hash):
                 return None
 
@@ -119,13 +124,13 @@ class DatabaseUserManager:
 
             return user
 
-        except Exception as e:
+        except Exception:
             db.rollback()
             raise
         finally:
             db.close()
 
-    def update_user(self, user_id: str, **updates) -> Optional[DBUser]:
+    def update_user(self, user_id: str, **updates) -> DBUser | None:
         """Update user information."""
         db = SessionLocal()
         try:
@@ -136,6 +141,7 @@ class DatabaseUserManager:
             for key, value in updates.items():
                 if key == "password":
                     from .auth import UserManager as FileUserManager
+
                     value = FileUserManager._hash_password(value)
                     key = "password_hash"
                 if hasattr(user, key):
@@ -145,7 +151,7 @@ class DatabaseUserManager:
             db.refresh(user)
             return user
 
-        except Exception as e:
+        except Exception:
             db.rollback()
             raise
         finally:
@@ -158,8 +164,9 @@ class DatabaseSessionManager:
     def __init__(self, session_timeout: int = 24 * 60 * 60):
         self.session_timeout = session_timeout
 
-    def create_session(self, user_id: str, ip_address: Optional[str] = None,
-                      user_agent: Optional[str] = None) -> DBSession:
+    def create_session(
+        self, user_id: str, ip_address: str | None = None, user_agent: str | None = None
+    ) -> DBSession:
         """Create a new session."""
         db = SessionLocal()
         try:
@@ -179,13 +186,13 @@ class DatabaseSessionManager:
             logger.info(f"Created session for user {user_id}")
             return session
 
-        except Exception as e:
+        except Exception:
             db.rollback()
             raise
         finally:
             db.close()
 
-    def get_session(self, session_id: str) -> Optional[DBSession]:
+    def get_session(self, session_id: str) -> DBSession | None:
         """Get session by ID."""
         db = SessionLocal()
         try:
@@ -198,18 +205,19 @@ class DatabaseSessionManager:
         finally:
             db.close()
 
-    def get_user_sessions(self, user_id: str) -> List[DBSession]:
+    def get_user_sessions(self, user_id: str) -> list[DBSession]:
         """Get all active sessions for a user."""
         db = SessionLocal()
         try:
-            return db.query(DBSession).filter(
-                DBSession.user_id == user_id,
-                DBSession.expires_at > datetime.utcnow()
-            ).all()
+            return (
+                db.query(DBSession)
+                .filter(DBSession.user_id == user_id, DBSession.expires_at > datetime.utcnow())
+                .all()
+            )
         finally:
             db.close()
 
-    def extend_session(self, session_id: str) -> Optional[DBSession]:
+    def extend_session(self, session_id: str) -> DBSession | None:
         """Extend session expiration."""
         db = SessionLocal()
         try:
@@ -219,7 +227,7 @@ class DatabaseSessionManager:
                 db.commit()
                 db.refresh(session)
             return session
-        except Exception as e:
+        except Exception:
             db.rollback()
             raise
         finally:
@@ -236,7 +244,7 @@ class DatabaseSessionManager:
                 logger.info(f"Deleted session {session_id}")
                 return True
             return False
-        except Exception as e:
+        except Exception:
             db.rollback()
             raise
         finally:
@@ -254,7 +262,7 @@ class DatabaseSessionManager:
             if count:
                 logger.info(f"Deleted {count} sessions for user {user_id}")
             return count
-        except Exception as e:
+        except Exception:
             db.rollback()
             raise
         finally:
@@ -295,13 +303,13 @@ class DatabaseSoundManager:
             logger.info(f"Created sound: {sound.name} ({sound.id})")
             return sound
 
-        except Exception as e:
+        except Exception:
             db.rollback()
             raise
         finally:
             db.close()
 
-    def get_sound(self, sound_id: str) -> Optional[Sound]:
+    def get_sound(self, sound_id: str) -> Sound | None:
         """Get sound by ID."""
         db = SessionLocal()
         try:
@@ -309,8 +317,13 @@ class DatabaseSoundManager:
         finally:
             db.close()
 
-    def list_sounds(self, sound_type: Optional[str] = None, user_id: Optional[str] = None,
-                   limit: int = 50, offset: int = 0) -> List[Sound]:
+    def list_sounds(
+        self,
+        sound_type: str | None = None,
+        user_id: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[Sound]:
         """List sounds with optional filtering."""
         db = SessionLocal()
         try:
@@ -324,7 +337,7 @@ class DatabaseSoundManager:
         finally:
             db.close()
 
-    def update_sound(self, sound_id: str, **updates) -> Optional[Sound]:
+    def update_sound(self, sound_id: str, **updates) -> Sound | None:
         """Update sound metadata."""
         db = SessionLocal()
         try:
@@ -340,7 +353,7 @@ class DatabaseSoundManager:
             db.refresh(sound)
             return sound
 
-        except Exception as e:
+        except Exception:
             db.rollback()
             raise
         finally:
@@ -357,7 +370,7 @@ class DatabaseSoundManager:
                 logger.info(f"Deleted sound: {sound.name} ({sound_id})")
                 return True
             return False
-        except Exception as e:
+        except Exception:
             db.rollback()
             raise
         finally:
@@ -388,13 +401,13 @@ class DatabaseRoleManager:
             logger.info(f"Created role: {name}")
             return role
 
-        except Exception as e:
+        except Exception:
             db.rollback()
             raise
         finally:
             db.close()
 
-    def get_role_by_id(self, role_id: str) -> Optional[Role]:
+    def get_role_by_id(self, role_id: str) -> Role | None:
         """Get role by ID."""
         db = SessionLocal()
         try:
@@ -402,7 +415,7 @@ class DatabaseRoleManager:
         finally:
             db.close()
 
-    def get_role_by_name(self, name: str) -> Optional[Role]:
+    def get_role_by_name(self, name: str) -> Role | None:
         """Get role by name."""
         db = SessionLocal()
         try:
@@ -410,7 +423,7 @@ class DatabaseRoleManager:
         finally:
             db.close()
 
-    def list_roles(self) -> List[Role]:
+    def list_roles(self) -> list[Role]:
         """List all roles."""
         db = SessionLocal()
         try:
@@ -423,10 +436,13 @@ class DatabaseRoleManager:
         db = SessionLocal()
         try:
             # Check if assignment already exists
-            existing = db.query(RolePermission).filter(
-                RolePermission.role_id == role_id,
-                RolePermission.permission_id == permission_id
-            ).first()
+            existing = (
+                db.query(RolePermission)
+                .filter(
+                    RolePermission.role_id == role_id, RolePermission.permission_id == permission_id
+                )
+                .first()
+            )
 
             if existing:
                 return existing
@@ -444,7 +460,7 @@ class DatabaseRoleManager:
             logger.info(f"Assigned permission {permission_id} to role {role_id}")
             return role_permission
 
-        except Exception as e:
+        except Exception:
             db.rollback()
             raise
         finally:
@@ -454,10 +470,13 @@ class DatabaseRoleManager:
         """Remove a permission from a role."""
         db = SessionLocal()
         try:
-            role_permission = db.query(RolePermission).filter(
-                RolePermission.role_id == role_id,
-                RolePermission.permission_id == permission_id
-            ).first()
+            role_permission = (
+                db.query(RolePermission)
+                .filter(
+                    RolePermission.role_id == role_id, RolePermission.permission_id == permission_id
+                )
+                .first()
+            )
 
             if role_permission:
                 db.delete(role_permission)
@@ -466,19 +485,19 @@ class DatabaseRoleManager:
                 return True
             return False
 
-        except Exception as e:
+        except Exception:
             db.rollback()
             raise
         finally:
             db.close()
 
-    def get_role_permissions(self, role_id: str) -> List[Permission]:
+    def get_role_permissions(self, role_id: str) -> list[Permission]:
         """Get all permissions for a role."""
         db = SessionLocal()
         try:
-            role_permissions = db.query(RolePermission).filter(
-                RolePermission.role_id == role_id
-            ).all()
+            role_permissions = (
+                db.query(RolePermission).filter(RolePermission.role_id == role_id).all()
+            )
 
             permission_ids = [rp.permission_id for rp in role_permissions]
             if permission_ids:
@@ -492,7 +511,9 @@ class DatabaseRoleManager:
 class DatabasePermissionManager:
     """Database-backed permission manager."""
 
-    def create_permission(self, name: str, resource: str, action: str, description: str = None) -> Permission:
+    def create_permission(
+        self, name: str, resource: str, action: str, description: str = None
+    ) -> Permission:
         """Create a new permission."""
         db = SessionLocal()
         try:
@@ -515,13 +536,13 @@ class DatabasePermissionManager:
             logger.info(f"Created permission: {name}")
             return permission
 
-        except Exception as e:
+        except Exception:
             db.rollback()
             raise
         finally:
             db.close()
 
-    def get_permission_by_id(self, permission_id: str) -> Optional[Permission]:
+    def get_permission_by_id(self, permission_id: str) -> Permission | None:
         """Get permission by ID."""
         db = SessionLocal()
         try:
@@ -529,7 +550,7 @@ class DatabasePermissionManager:
         finally:
             db.close()
 
-    def get_permission_by_name(self, name: str) -> Optional[Permission]:
+    def get_permission_by_name(self, name: str) -> Permission | None:
         """Get permission by name."""
         db = SessionLocal()
         try:
@@ -537,7 +558,7 @@ class DatabasePermissionManager:
         finally:
             db.close()
 
-    def list_permissions(self) -> List[Permission]:
+    def list_permissions(self) -> list[Permission]:
         """List all permissions."""
         db = SessionLocal()
         try:
@@ -545,7 +566,7 @@ class DatabasePermissionManager:
         finally:
             db.close()
 
-    def list_permissions_by_resource(self, resource: str) -> List[Permission]:
+    def list_permissions_by_resource(self, resource: str) -> list[Permission]:
         """List permissions for a specific resource."""
         db = SessionLocal()
         try:

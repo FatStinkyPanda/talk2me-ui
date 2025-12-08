@@ -7,18 +7,22 @@ file-based data to the new database schema.
 
 import json
 import logging
-from pathlib import Path
-from datetime import datetime
-from uuid import uuid4
-
 import sys
+from datetime import datetime
 from pathlib import Path
+from uuid import uuid4
 
 # Add the src directory to the Python path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from talk2me_ui.database import init_db, SessionLocal
-from talk2me_ui.database import User, Session, Project, Sound, Voice, ConversationSession, Message
+from talk2me_ui.database import (
+    Project,
+    Session,
+    SessionLocal,
+    Sound,
+    User,
+    init_db,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -48,9 +52,13 @@ def migrate_users():
                 username=user_data["username"],
                 email=user_data["email"],
                 password_hash=user_data["password_hash"],
-                created_at=datetime.fromisoformat(user_data["created_at"]) if "created_at" in user_data else datetime.utcnow(),
+                created_at=datetime.fromisoformat(user_data["created_at"])
+                if "created_at" in user_data
+                else datetime.utcnow(),
                 is_active=user_data.get("is_active", True),
-                last_login=datetime.fromisoformat(user_data["last_login"]) if user_data.get("last_login") else None,
+                last_login=datetime.fromisoformat(user_data["last_login"])
+                if user_data.get("last_login")
+                else None,
             )
             db.add(user)
             logger.info(f"Migrated user: {user.username}")

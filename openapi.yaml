@@ -226,7 +226,7 @@ components:
         voices:
           type: array
           items:
-            $ref: '#/components/schemas/Voice'
+            $ref: "#/components/schemas/Voice"
       required:
         - voices
 
@@ -498,7 +498,7 @@ components:
 
     SoundEffectUploadRequest:
       allOf:
-        - $ref: '#/components/schemas/SoundUploadRequest'
+        - $ref: "#/components/schemas/SoundUploadRequest"
         - type: object
           properties:
             category:
@@ -527,7 +527,7 @@ components:
 
     BackgroundAudioUploadRequest:
       allOf:
-        - $ref: '#/components/schemas/SoundUploadRequest'
+        - $ref: "#/components/schemas/SoundUploadRequest"
         - type: object
           properties:
             sound_type:
@@ -638,12 +638,12 @@ paths:
       tags:
         - Health
       responses:
-        '200':
+        "200":
           description: Service is healthy
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthStatus'
+                $ref: "#/components/schemas/HealthStatus"
               example:
                 status: healthy
                 timestamp: "2024-01-15T10:30:00Z"
@@ -657,7 +657,7 @@ paths:
       tags:
         - Monitoring
       responses:
-        '200':
+        "200":
           description: Metrics data
           content:
             text/plain:
@@ -673,7 +673,7 @@ paths:
       tags:
         - Authentication
       responses:
-        '200':
+        "200":
           description: Login page HTML
           content:
             text/html:
@@ -689,21 +689,21 @@ paths:
         content:
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: "#/components/schemas/LoginRequest"
       responses:
-        '302':
+        "302":
           description: Login successful, redirect to dashboard
           headers:
             Set-Cookie:
               schema:
                 type: string
                 description: Session cookie
-        '401':
+        "401":
           description: Invalid credentials
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /auth/register:
     get:
@@ -712,7 +712,7 @@ paths:
       tags:
         - Authentication
       responses:
-        '200':
+        "200":
           description: Registration page HTML
           content:
             text/html:
@@ -728,16 +728,16 @@ paths:
         content:
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/RegisterRequest'
+              $ref: "#/components/schemas/RegisterRequest"
       responses:
-        '302':
+        "302":
           description: Registration successful, redirect to login
-        '400':
+        "400":
           description: Validation error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /auth/logout:
     post:
@@ -746,7 +746,7 @@ paths:
       tags:
         - Authentication
       responses:
-        '302':
+        "302":
           description: Logout successful, redirect to login
 
   # STT endpoints
@@ -782,26 +782,26 @@ paths:
               required:
                 - audio_file
       responses:
-        '200':
+        "200":
           description: Transcription task created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TaskResponse'
+                $ref: "#/components/schemas/TaskResponse"
               example:
                 task_id: "123e4567-e89b-12d3-a456-426614174000"
-        '400':
+        "400":
           description: Invalid file or parameters
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '413':
+                $ref: "#/components/schemas/Error"
+        "413":
           description: File too large
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /api/stt/{task_id}:
     get:
@@ -821,12 +821,12 @@ paths:
           description: Task identifier
           example: "123e4567-e89b-12d3-a456-426614174000"
       responses:
-        '200':
+        "200":
           description: Task status
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TaskStatus'
+                $ref: "#/components/schemas/TaskStatus"
               examples:
                 processing:
                   value:
@@ -840,12 +840,12 @@ paths:
                   value:
                     status: failed
                     error: "Audio format not supported"
-        '404':
+        "404":
           description: Task not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   # TTS endpoints
   /api/tts:
@@ -867,20 +867,20 @@ paths:
         content:
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TTSRequest'
+              $ref: "#/components/schemas/TTSRequest"
       responses:
-        '200':
+        "200":
           description: Synthesis task created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TaskResponse'
-        '400':
+                $ref: "#/components/schemas/TaskResponse"
+        "400":
           description: Invalid parameters
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /api/tts/{task_id}:
     get:
@@ -899,13 +899,13 @@ paths:
             format: uuid
           description: Task identifier
       responses:
-        '200':
+        "200":
           description: Task status
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TaskStatus'
-        '404':
+                $ref: "#/components/schemas/TaskStatus"
+        "404":
           description: Task not found
 
   /api/tts/audio/{task_id}:
@@ -925,16 +925,16 @@ paths:
             format: uuid
           description: Task identifier
       responses:
-        '200':
+        "200":
           description: Audio file
           content:
             audio/wav:
               schema:
                 type: string
                 format: binary
-        '400':
+        "400":
           description: Task not completed
-        '404':
+        "404":
           description: Task not found
 
   # Voice management
@@ -947,12 +947,12 @@ paths:
       security:
         - sessionAuth: []
       responses:
-        '200':
+        "200":
           description: List of voices
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VoiceList'
+                $ref: "#/components/schemas/VoiceList"
               example:
                 voices:
                   - name: "Default Voice"
@@ -979,20 +979,20 @@ paths:
         content:
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/VoiceCreateRequest'
+              $ref: "#/components/schemas/VoiceCreateRequest"
       responses:
-        '200':
+        "200":
           description: Voice created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VoiceCreateResponse'
-        '400':
+                $ref: "#/components/schemas/VoiceCreateResponse"
+        "400":
           description: Invalid parameters
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /api/voices/{voice_id}:
     put:
@@ -1015,9 +1015,9 @@ paths:
         content:
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/VoiceUpdateRequest'
+              $ref: "#/components/schemas/VoiceUpdateRequest"
       responses:
-        '200':
+        "200":
           description: Voice updated successfully
           content:
             application/json:
@@ -1027,7 +1027,7 @@ paths:
                   message:
                     type: string
                     example: "Voice updated successfully"
-        '404':
+        "404":
           description: Voice not found
     delete:
       summary: Delete voice
@@ -1045,7 +1045,7 @@ paths:
             type: string
           description: Voice identifier
       responses:
-        '200':
+        "200":
           description: Voice deleted successfully
           content:
             application/json:
@@ -1055,7 +1055,7 @@ paths:
                   message:
                     type: string
                     example: "Voice deleted successfully"
-        '404':
+        "404":
           description: Voice not found
 
   # Audiobook endpoints
@@ -1077,15 +1077,15 @@ paths:
         content:
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/AudiobookRequest'
+              $ref: "#/components/schemas/AudiobookRequest"
       responses:
-        '200':
+        "200":
           description: Audiobook generation task created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TaskResponse'
-        '400':
+                $ref: "#/components/schemas/TaskResponse"
+        "400":
           description: Invalid markup or parameters
 
   /api/audiobook/{task_id}:
@@ -1105,13 +1105,13 @@ paths:
             format: uuid
           description: Task identifier
       responses:
-        '200':
+        "200":
           description: Task status
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TaskStatus'
-        '404':
+                $ref: "#/components/schemas/TaskStatus"
+        "404":
           description: Task not found
 
   /api/audiobook/audio/{task_id}:
@@ -1131,16 +1131,16 @@ paths:
             format: uuid
           description: Task identifier
       responses:
-        '200':
+        "200":
           description: Audiobook audio file
           content:
             audio/wav:
               schema:
                 type: string
                 format: binary
-        '400':
+        "400":
           description: Task not completed
-        '404':
+        "404":
           description: Task not found
 
   # Sound effects endpoints
@@ -1153,14 +1153,14 @@ paths:
       security:
         - sessionAuth: []
       responses:
-        '200':
+        "200":
           description: List of sound effects
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/SoundEffect'
+                  $ref: "#/components/schemas/SoundEffect"
     post:
       summary: Upload sound effect
       description: |
@@ -1178,15 +1178,15 @@ paths:
         content:
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/SoundEffectUploadRequest'
+              $ref: "#/components/schemas/SoundEffectUploadRequest"
       responses:
-        '200':
+        "200":
           description: Sound effect uploaded successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SoundUploadResponse'
-        '400':
+                $ref: "#/components/schemas/SoundUploadResponse"
+        "400":
           description: Invalid file or parameters
 
   /api/sounds/effects/{sound_id}:
@@ -1205,13 +1205,13 @@ paths:
             type: string
           description: Sound effect identifier
       responses:
-        '200':
+        "200":
           description: Sound effect metadata
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SoundEffect'
-        '404':
+                $ref: "#/components/schemas/SoundEffect"
+        "404":
           description: Sound effect not found
     put:
       summary: Update sound effect
@@ -1250,13 +1250,13 @@ paths:
                 pause_speech:
                   type: boolean
       responses:
-        '200':
+        "200":
           description: Sound effect updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SoundEffect'
-        '404':
+                $ref: "#/components/schemas/SoundEffect"
+        "404":
           description: Sound effect not found
     delete:
       summary: Delete sound effect
@@ -1274,7 +1274,7 @@ paths:
             type: string
           description: Sound effect identifier
       responses:
-        '200':
+        "200":
           description: Sound effect deleted
           content:
             application/json:
@@ -1301,14 +1301,14 @@ paths:
             type: string
           description: Sound effect identifier
       responses:
-        '200':
+        "200":
           description: Audio file
           content:
             audio/*:
               schema:
                 type: string
                 format: binary
-        '404':
+        "404":
           description: Sound effect not found
 
   # Background audio endpoints
@@ -1321,14 +1321,14 @@ paths:
       security:
         - sessionAuth: []
       responses:
-        '200':
+        "200":
           description: List of background audio
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/BackgroundAudio'
+                  $ref: "#/components/schemas/BackgroundAudio"
     post:
       summary: Upload background audio
       description: |
@@ -1346,15 +1346,15 @@ paths:
         content:
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/BackgroundAudioUploadRequest'
+              $ref: "#/components/schemas/BackgroundAudioUploadRequest"
       responses:
-        '200':
+        "200":
           description: Background audio uploaded successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SoundUploadResponse'
-        '400':
+                $ref: "#/components/schemas/SoundUploadResponse"
+        "400":
           description: Invalid file or parameters
 
   /api/sounds/background/{sound_id}:
@@ -1373,13 +1373,13 @@ paths:
             type: string
           description: Background audio identifier
       responses:
-        '200':
+        "200":
           description: Background audio metadata
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BackgroundAudio'
-        '404':
+                $ref: "#/components/schemas/BackgroundAudio"
+        "404":
           description: Background audio not found
     put:
       summary: Update background audio
@@ -1421,13 +1421,13 @@ paths:
                 duck_speech:
                   type: boolean
       responses:
-        '200':
+        "200":
           description: Background audio updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BackgroundAudio'
-        '404':
+                $ref: "#/components/schemas/BackgroundAudio"
+        "404":
           description: Background audio not found
     delete:
       summary: Delete background audio
@@ -1445,7 +1445,7 @@ paths:
             type: string
           description: Background audio identifier
       responses:
-        '200':
+        "200":
           description: Background audio deleted
           content:
             application/json:
@@ -1472,14 +1472,14 @@ paths:
             type: string
           description: Background audio identifier
       responses:
-        '200':
+        "200":
           description: Audio file
           content:
             audio/*:
               schema:
                 type: string
                 format: binary
-        '404':
+        "404":
           description: Background audio not found
 
   # WebSocket endpoint
@@ -1504,9 +1504,9 @@ paths:
       security:
         - sessionAuth: []
       responses:
-        '101':
+        "101":
           description: WebSocket connection established
-        '401':
+        "401":
           description: Authentication required
-        '500':
+        "500":
           description: Server error

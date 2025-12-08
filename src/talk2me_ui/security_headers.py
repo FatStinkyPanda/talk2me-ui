@@ -4,8 +4,6 @@ This module provides comprehensive security headers middleware
 to protect against common web vulnerabilities.
 """
 
-from typing import Dict, List, Optional
-
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -16,7 +14,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app,
-        content_security_policy: Optional[Dict[str, List[str]]] = None,
+        content_security_policy: dict[str, list[str]] | None = None,
         hsts_max_age: int = 31536000,  # 1 year
         hsts_include_subdomains: bool = True,
         hsts_preload: bool = False,
@@ -24,10 +22,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         content_type_options: str = "nosniff",
         xss_protection: str = "1; mode=block",
         referrer_policy: str = "strict-origin-when-cross-origin",
-        permissions_policy: Optional[Dict[str, List[str]]] = None,
-        cross_origin_embedder_policy: Optional[str] = None,
-        cross_origin_opener_policy: Optional[str] = None,
-        cross_origin_resource_policy: Optional[str] = None,
+        permissions_policy: dict[str, list[str]] | None = None,
+        cross_origin_embedder_policy: str | None = None,
+        cross_origin_opener_policy: str | None = None,
+        cross_origin_resource_policy: str | None = None,
     ):
         """Initialize security headers middleware.
 
@@ -75,37 +73,37 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         self.cross_origin_opener_policy = cross_origin_opener_policy
         self.cross_origin_resource_policy = cross_origin_resource_policy
 
-    def _get_default_csp(self) -> Dict[str, List[str]]:
+    def _get_default_csp(self) -> dict[str, list[str]]:
         """Get default Content Security Policy directives."""
         return {
             "default-src": ["'self'"],
             "script-src": ["'self'", "'unsafe-inline'"],  # Allow inline scripts for now
-            "style-src": ["'self'", "'unsafe-inline'"],   # Allow inline styles
-            "img-src": ["'self'", "data:", "blob:"],      # Allow data URLs and blobs
+            "style-src": ["'self'", "'unsafe-inline'"],  # Allow inline styles
+            "img-src": ["'self'", "data:", "blob:"],  # Allow data URLs and blobs
             "font-src": ["'self'"],
-            "connect-src": ["'self'", "ws:", "wss:"],     # Allow WebSocket connections
-            "media-src": ["'self'", "blob:"],             # Allow audio/video blobs
-            "object-src": ["'none'"],                     # Block plugins
-            "frame-src": ["'none'"],                      # Block frames
+            "connect-src": ["'self'", "ws:", "wss:"],  # Allow WebSocket connections
+            "media-src": ["'self'", "blob:"],  # Allow audio/video blobs
+            "object-src": ["'none'"],  # Block plugins
+            "frame-src": ["'none'"],  # Block frames
             "base-uri": ["'self'"],
             "form-action": ["'self'"],
         }
 
-    def _get_default_permissions_policy(self) -> Dict[str, List[str]]:
+    def _get_default_permissions_policy(self) -> dict[str, list[str]]:
         """Get default Permissions Policy directives."""
         return {
-            "camera": ["()"],           # Deny camera access
-            "microphone": ["()"],       # Deny microphone access (we handle this separately)
-            "geolocation": ["()"],      # Deny geolocation
-            "payment": ["()"],          # Deny payment APIs
-            "usb": ["()"],              # Deny USB access
-            "magnetometer": ["()"],     # Deny magnetometer
-            "accelerometer": ["()"],    # Deny accelerometer
-            "gyroscope": ["()"],        # Deny gyroscope
+            "camera": ["()"],  # Deny camera access
+            "microphone": ["()"],  # Deny microphone access (we handle this separately)
+            "geolocation": ["()"],  # Deny geolocation
+            "payment": ["()"],  # Deny payment APIs
+            "usb": ["()"],  # Deny USB access
+            "magnetometer": ["()"],  # Deny magnetometer
+            "accelerometer": ["()"],  # Deny accelerometer
+            "gyroscope": ["()"],  # Deny gyroscope
             "ambient-light-sensor": ["()"],  # Deny ambient light sensor
         }
 
-    def _build_csp(self, directives: Dict[str, List[str]]) -> str:
+    def _build_csp(self, directives: dict[str, list[str]]) -> str:
         """Build CSP header value from directives."""
         csp_parts = []
         for directive, values in directives.items():
@@ -113,7 +111,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 csp_parts.append(f"{directive} {' '.join(values)}")
         return "; ".join(csp_parts)
 
-    def _build_permissions_policy(self, directives: Dict[str, List[str]]) -> str:
+    def _build_permissions_policy(self, directives: dict[str, list[str]]) -> str:
         """Build Permissions-Policy header value from directives."""
         policy_parts = []
         for directive, values in directives.items():
@@ -197,13 +195,13 @@ class SecurityHeadersConfig:
     """Configuration class for security headers."""
 
     @staticmethod
-    def get_production_config() -> Dict:
+    def get_production_config() -> dict:
         """Get production-ready security headers configuration."""
         return {
             "content_security_policy": {
                 "default-src": ["'self'"],
                 "script-src": ["'self'"],  # Remove 'unsafe-inline' in production
-                "style-src": ["'self'"],   # Remove 'unsafe-inline' in production
+                "style-src": ["'self'"],  # Remove 'unsafe-inline' in production
                 "img-src": ["'self'", "data:", "blob:"],
                 "font-src": ["'self'"],
                 "connect-src": ["'self'", "ws:", "wss:"],
@@ -227,7 +225,7 @@ class SecurityHeadersConfig:
         }
 
     @staticmethod
-    def get_development_config() -> Dict:
+    def get_development_config() -> dict:
         """Get development-friendly security headers configuration."""
         config = SecurityHeadersConfig.get_production_config()
         # Relax CSP for development

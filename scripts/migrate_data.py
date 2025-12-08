@@ -7,24 +7,22 @@ Run this script after setting up the database but before switching to database-b
 
 import json
 import logging
-from datetime import datetime
-from pathlib import Path
-
-from sqlalchemy.orm import sessionmaker
 
 # Add src to path for imports
 import sys
+from datetime import datetime
+from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from talk2me_ui.database import (
-    SessionLocal,
-    User,
-    Session as DBSession,
     Project,
+    SessionLocal,
     Sound,
-    ConversationSession,
-    Message,
-    engine,
+    User,
+)
+from talk2me_ui.database import (
+    Session as DBSession,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -60,9 +58,9 @@ def migrate_users():
             last_login = user_data.get("last_login")
 
             if isinstance(created_at, str):
-                created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
             if isinstance(last_login, str):
-                last_login = datetime.fromisoformat(last_login.replace('Z', '+00:00'))
+                last_login = datetime.fromisoformat(last_login.replace("Z", "+00:00"))
 
             user = User(
                 id=user_data["id"],
@@ -113,9 +111,9 @@ def migrate_sessions():
             expires_at = session_data.get("expires_at")
 
             if isinstance(created_at, str):
-                created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
             if isinstance(expires_at, str):
-                expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                expires_at = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
 
             session = DBSession(
                 id=session_data["id"],
@@ -156,10 +154,14 @@ def migrate_projects():
                     project_data = json.load(f)
 
                 # Skip if already exists
-                existing = db.query(Project).filter_by(
-                    name=project_data["name"],
-                    user_id="system"  # Default user for migrated projects
-                ).first()
+                existing = (
+                    db.query(Project)
+                    .filter_by(
+                        name=project_data["name"],
+                        user_id="system",  # Default user for migrated projects
+                    )
+                    .first()
+                )
                 if existing:
                     logger.info(f"Project {project_data['name']} already exists, skipping")
                     continue
@@ -188,10 +190,7 @@ def migrate_projects():
 
 def migrate_sounds():
     """Migrate sounds (effects and background) from JSON to database."""
-    sound_dirs = [
-        ("sfx", "effect"),
-        ("background", "background")
-    ]
+    sound_dirs = [("sfx", "effect"), ("background", "background")]
 
     db = SessionLocal()
     try:
@@ -218,7 +217,7 @@ def migrate_sounds():
                     # Convert uploaded_at
                     uploaded_at = sound_data.get("uploaded_at")
                     if isinstance(uploaded_at, str):
-                        uploaded_at = datetime.fromisoformat(uploaded_at.replace('Z', '+00:00'))
+                        uploaded_at = datetime.fromisoformat(uploaded_at.replace("Z", "+00:00"))
 
                     sound = Sound(
                         id=sound_data["id"],
@@ -267,11 +266,10 @@ def create_default_user():
 
             # Create a default admin user
             from talk2me_ui.auth import UserManager
+
             user_manager = UserManager(Path("data"))
             default_user = user_manager.create_user(
-                username="admin",
-                email="admin@talk2me.local",
-                password="changeme123"
+                username="admin", email="admin@talk2me.local", password="changeme123"
             )
 
             # Also add to database
@@ -303,6 +301,7 @@ def main():
 
     # Create database tables if they don't exist
     from talk2me_ui.database import init_db
+
     init_db()
 
     # Run migrations

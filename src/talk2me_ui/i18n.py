@@ -5,9 +5,8 @@ and frontend JavaScript applications.
 """
 
 import json
-import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class I18nManager:
@@ -26,7 +25,7 @@ class I18nManager:
         else:
             self.translations_dir = Path(translations_dir)
 
-        self.translations: Dict[str, Dict[str, Any]] = {}
+        self.translations: dict[str, dict[str, Any]] = {}
         self.default_locale = "en"
         self.supported_locales = ["en", "es", "fr", "de", "zh"]
 
@@ -38,7 +37,7 @@ class I18nManager:
             translation_file = self.translations_dir / f"{locale}.json"
             if translation_file.exists():
                 try:
-                    with open(translation_file, 'r', encoding='utf-8') as f:
+                    with open(translation_file, encoding="utf-8") as f:
                         self.translations[locale] = json.load(f)
                 except (json.JSONDecodeError, FileNotFoundError):
                     # Fallback to empty dict if file is corrupted or missing
@@ -65,7 +64,7 @@ class I18nManager:
             locale = self.default_locale
 
         # Navigate through nested keys
-        keys = key.split('.')
+        keys = key.split(".")
         value = self.translations[locale]
 
         try:
@@ -118,10 +117,10 @@ class I18nManager:
 
         # Parse Accept-Language header
         languages = []
-        for lang in accept_language.split(','):
-            lang = lang.strip().split(';')[0].strip()
+        for lang in accept_language.split(","):
+            lang = lang.strip().split(";")[0].strip()
             # Extract base language (e.g., 'en-US' -> 'en')
-            base_lang = lang.split('-')[0].lower()
+            base_lang = lang.split("-")[0].lower()
             languages.append(base_lang)
 
         # Find first supported language
@@ -180,7 +179,7 @@ def get_template_context(locale: str = None):
         i18n_manager.set_locale(locale)
 
     return {
-        '_': gettext,
-        'gettext': gettext,
-        'ngettext': ngettext,
+        "_": gettext,
+        "gettext": gettext,
+        "ngettext": ngettext,
     }

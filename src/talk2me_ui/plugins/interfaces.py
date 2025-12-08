@@ -5,10 +5,9 @@ to integrate with the Talk2Me UI plugin system.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Protocol, Union
 from pathlib import Path
-import asyncio
-from fastapi import Request, Response
+from typing import Any
+
 from pydub import AudioSegment
 
 
@@ -22,11 +21,11 @@ class PluginMetadata:
         description: str,
         author: str,
         plugin_type: str,
-        dependencies: Optional[List[str]] = None,
-        config_schema: Optional[Dict[str, Any]] = None,
-        homepage: Optional[str] = None,
-        license: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        dependencies: list[str] | None = None,
+        config_schema: dict[str, Any] | None = None,
+        homepage: str | None = None,
+        license: str | None = None,
+        tags: list[str] | None = None,
     ):
         self.name = name
         self.version = version
@@ -50,7 +49,7 @@ class PluginInterface(ABC):
         pass
 
     @abstractmethod
-    async def initialize(self, config: Dict[str, Any]) -> None:
+    async def initialize(self, config: dict[str, Any]) -> None:
         """Initialize the plugin with configuration."""
         pass
 
@@ -60,7 +59,7 @@ class PluginInterface(ABC):
         pass
 
     @abstractmethod
-    def get_config_schema(self) -> Dict[str, Any]:
+    def get_config_schema(self) -> dict[str, Any]:
         """Return JSON schema for plugin configuration."""
         pass
 
@@ -69,11 +68,7 @@ class AudioProcessorPlugin(PluginInterface):
     """Interface for audio processing plugins."""
 
     @abstractmethod
-    async def process_audio(
-        self,
-        audio: AudioSegment,
-        config: Dict[str, Any]
-    ) -> AudioSegment:
+    async def process_audio(self, audio: AudioSegment, config: dict[str, Any]) -> AudioSegment:
         """Process audio data.
 
         Args:
@@ -86,12 +81,12 @@ class AudioProcessorPlugin(PluginInterface):
         pass
 
     @abstractmethod
-    def get_supported_formats(self) -> List[str]:
+    def get_supported_formats(self) -> list[str]:
         """Return list of supported audio formats."""
         pass
 
     @abstractmethod
-    def get_processing_capabilities(self) -> Dict[str, Any]:
+    def get_processing_capabilities(self) -> dict[str, Any]:
         """Return processing capabilities and parameters."""
         pass
 
@@ -105,7 +100,7 @@ class UIComponentPlugin(PluginInterface):
         pass
 
     @abstractmethod
-    def render_component(self, config: Dict[str, Any], context: Dict[str, Any]) -> str:
+    def render_component(self, config: dict[str, Any], context: dict[str, Any]) -> str:
         """Render the component as HTML.
 
         Args:
@@ -118,12 +113,12 @@ class UIComponentPlugin(PluginInterface):
         pass
 
     @abstractmethod
-    def get_javascript_assets(self) -> List[str]:
+    def get_javascript_assets(self) -> list[str]:
         """Return list of JavaScript asset paths."""
         pass
 
     @abstractmethod
-    def get_css_assets(self) -> List[str]:
+    def get_css_assets(self) -> list[str]:
         """Return list of CSS asset paths."""
         pass
 
@@ -132,7 +127,7 @@ class APIEndpointPlugin(PluginInterface):
     """Interface for API endpoint plugins."""
 
     @abstractmethod
-    def get_routes(self) -> List[Dict[str, Any]]:
+    def get_routes(self) -> list[dict[str, Any]]:
         """Return list of route definitions.
 
         Each route should be a dict with:
@@ -145,7 +140,7 @@ class APIEndpointPlugin(PluginInterface):
         pass
 
     @abstractmethod
-    def get_openapi_extensions(self) -> Dict[str, Any]:
+    def get_openapi_extensions(self) -> dict[str, Any]:
         """Return OpenAPI extensions for the plugin."""
         pass
 
@@ -154,7 +149,7 @@ class IntegrationPlugin(PluginInterface):
     """Interface for integration plugins (external services)."""
 
     @abstractmethod
-    async def connect(self, credentials: Dict[str, Any]) -> bool:
+    async def connect(self, credentials: dict[str, Any]) -> bool:
         """Establish connection to external service.
 
         Args:
@@ -176,7 +171,7 @@ class IntegrationPlugin(PluginInterface):
         pass
 
     @abstractmethod
-    async def send_message(self, message: Dict[str, Any]) -> bool:
+    async def send_message(self, message: dict[str, Any]) -> bool:
         """Send message through integration.
 
         Args:
@@ -188,7 +183,7 @@ class IntegrationPlugin(PluginInterface):
         pass
 
     @abstractmethod
-    async def receive_messages(self) -> List[Dict[str, Any]]:
+    async def receive_messages(self) -> list[dict[str, Any]]:
         """Receive messages from integration.
 
         Returns:
@@ -202,7 +197,7 @@ class PluginContext:
 
     def __init__(
         self,
-        app_config: Dict[str, Any],
+        app_config: dict[str, Any],
         database_manager: Any,
         api_client: Any,
         user_manager: Any,
@@ -221,7 +216,7 @@ class PluginLoadContext:
     def __init__(
         self,
         plugin_path: Path,
-        plugin_config: Dict[str, Any],
+        plugin_config: dict[str, Any],
         context: PluginContext,
     ):
         self.plugin_path = plugin_path

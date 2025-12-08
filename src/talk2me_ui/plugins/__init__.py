@@ -5,17 +5,17 @@ developers to extend the application with custom audio processors, UI components
 API endpoints, and integrations.
 """
 
-from .plugin_manager import PluginManager
-from .interfaces import (
-    PluginInterface,
-    AudioProcessorPlugin,
-    UIComponentPlugin,
-    APIEndpointPlugin,
-    IntegrationPlugin,
-)
 from .discovery import PluginDiscovery
+from .interfaces import (
+    APIEndpointPlugin,
+    AudioProcessorPlugin,
+    IntegrationPlugin,
+    PluginInterface,
+    UIComponentPlugin,
+)
 from .lifecycle import PluginLifecycle
 from .marketplace import PluginMarketplace
+from .plugin_manager import PluginManager
 
 __all__ = [
     "PluginManager",

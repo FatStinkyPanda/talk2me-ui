@@ -5,13 +5,13 @@ that can modify audio data in real-time.
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any
+
 from pydub import AudioSegment
 
 from src.talk2me_ui.plugins.interfaces import (
     AudioProcessorPlugin,
     PluginMetadata,
-    PluginLoadContext,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,29 +40,29 @@ class ExampleAudioProcessor(AudioProcessorPlugin):
                     "enabled": {
                         "type": "boolean",
                         "default": True,
-                        "description": "Whether the plugin is enabled"
+                        "description": "Whether the plugin is enabled",
                     },
                     "gain_db": {
                         "type": "number",
                         "default": 0.0,
                         "minimum": -20.0,
                         "maximum": 20.0,
-                        "description": "Gain adjustment in decibels"
+                        "description": "Gain adjustment in decibels",
                     },
                     "normalize": {
                         "type": "boolean",
-                        "default": false,
-                        "description": "Whether to normalize audio levels"
-                    }
+                        "default": False,
+                        "description": "Whether to normalize audio levels",
+                    },
                 },
-                "required": ["enabled"]
+                "required": ["enabled"],
             },
             homepage="https://github.com/talk2me/plugins",
             license="MIT",
-            tags=["audio", "processing", "example"]
+            tags=["audio", "processing", "example"],
         )
 
-    async def initialize(self, config: Dict[str, Any]) -> None:
+    async def initialize(self, config: dict[str, Any]) -> None:
         """Initialize the plugin with configuration."""
         logger.info("Initializing Example Audio Processor plugin")
 
@@ -92,15 +92,11 @@ class ExampleAudioProcessor(AudioProcessorPlugin):
         logger.info("Shutting down Example Audio Processor plugin")
         self.initialized = False
 
-    def get_config_schema(self) -> Dict[str, Any]:
+    def get_config_schema(self) -> dict[str, Any]:
         """Return JSON schema for plugin configuration."""
         return self.metadata.config_schema
 
-    async def process_audio(
-        self,
-        audio: AudioSegment,
-        config: Dict[str, Any]
-    ) -> AudioSegment:
+    async def process_audio(self, audio: AudioSegment, config: dict[str, Any]) -> AudioSegment:
         """Process audio data.
 
         Args:
@@ -139,25 +135,21 @@ class ExampleAudioProcessor(AudioProcessorPlugin):
                 gain_needed = target_dBFS - current_dBFS
                 processed_audio = processed_audio + gain_needed
 
-        logger.debug(f"Audio processing completed. Original: {len(audio)}ms, Processed: {len(processed_audio)}ms")
+        logger.debug(
+            f"Audio processing completed. Original: {len(audio)}ms, Processed: {len(processed_audio)}ms"
+        )
         return processed_audio
 
-    def get_supported_formats(self) -> List[str]:
+    def get_supported_formats(self) -> list[str]:
         """Return list of supported audio formats."""
         return ["wav", "mp3", "ogg", "flac", "aac"]
 
-    def get_processing_capabilities(self) -> Dict[str, Any]:
+    def get_processing_capabilities(self) -> dict[str, Any]:
         """Return processing capabilities and parameters."""
         return {
-            "gain_adjustment": {
-                "range_db": [-20.0, 20.0],
-                "default": 0.0
-            },
-            "normalization": {
-                "target_dBFS": -3.0,
-                "enabled": True
-            },
+            "gain_adjustment": {"range_db": [-20.0, 20.0], "default": 0.0},
+            "normalization": {"target_dBFS": -3.0, "enabled": True},
             "supported_formats": self.get_supported_formats(),
             "real_time_processing": True,
-            "max_channels": 2
+            "max_channels": 2,
         }

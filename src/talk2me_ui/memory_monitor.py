@@ -6,53 +6,48 @@ and memory optimization features for the application.
 
 import gc
 import logging
-import os
-import psutil
 import threading
 import time
 from collections import defaultdict
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
 from weakref import WeakSet
 
 import prometheus_client as prom
+import psutil
 
 logger = logging.getLogger(__name__)
 
 # Prometheus metrics for memory monitoring
-memory_usage_gauge = prom.Gauge(
-    'memory_usage_bytes', 'Current memory usage in bytes', ['type']
-)
+memory_usage_gauge = prom.Gauge("memory_usage_bytes", "Current memory usage in bytes", ["type"])
 
-memory_peak_gauge = prom.Gauge(
-    'memory_peak_bytes', 'Peak memory usage in bytes', ['type']
-)
+memory_peak_gauge = prom.Gauge("memory_peak_bytes", "Peak memory usage in bytes", ["type"])
 
 gc_collections_counter = prom.Counter(
-    'gc_collections_total', 'Total garbage collections by generation', ['generation']
+    "gc_collections_total", "Total garbage collections by generation", ["generation"]
 )
 
 object_count_gauge = prom.Gauge(
-    'python_object_count', 'Number of Python objects by type', ['object_type']
+    "python_object_count", "Number of Python objects by type", ["object_type"]
 )
 
 memory_leaks_detected = prom.Counter(
-    'memory_leaks_detected_total', 'Number of memory leaks detected'
+    "memory_leaks_detected_total", "Number of memory leaks detected"
 )
 
 
 @dataclass
 class MemoryStats:
     """Memory statistics snapshot."""
+
     total_memory: int
     available_memory: int
     used_memory: int
     memory_percent: float
     process_memory: int
     process_memory_percent: float
-    gc_stats: Dict[int, int]
-    object_counts: Dict[str, int]
+    gc_stats: dict[int, int]
+    object_counts: dict[str, int]
 
 
 class MemoryMonitor:
@@ -62,10 +57,10 @@ class MemoryMonitor:
         self.check_interval = check_interval
         self.leak_threshold = leak_threshold
         self.monitoring = False
-        self.monitor_thread: Optional[threading.Thread] = None
-        self.baseline_objects: Dict[str, int] = {}
+        self.monitor_thread: threading.Thread | None = None
+        self.baseline_objects: dict[str, int] = {}
         self.object_trackers: WeakSet = WeakSet()
-        self.memory_history: List[MemoryStats] = []
+        self.memory_history: list[MemoryStats] = []
         self.max_history_size = 100
 
     def start_monitoring(self) -> None:
@@ -76,9 +71,7 @@ class MemoryMonitor:
         self.monitoring = True
         self.baseline_objects = self._get_object_counts()
         self.monitor_thread = threading.Thread(
-            target=self._monitor_loop,
-            daemon=True,
-            name="MemoryMonitor"
+            target=self._monitor_loop, daemon=True, name="MemoryMonitor"
         )
         self.monitor_thread.start()
         logger.info("Memory monitoring started")
@@ -107,7 +100,7 @@ class MemoryMonitor:
         # GC stats
         gc_stats = {}
         for gen in range(3):
-            gc_stats[gen] = gc.get_stats()[gen]['collected']
+            gc_stats[gen] = gc.get_stats()[gen]["collected"]
 
         # Object counts
         object_counts = self._get_object_counts()
@@ -120,10 +113,10 @@ class MemoryMonitor:
             process_memory=process_memory,
             process_memory_percent=process_memory_percent,
             gc_stats=gc_stats,
-            object_counts=object_counts
+            object_counts=object_counts,
         )
 
-    def check_for_memory_leaks(self) -> List[str]:
+    def check_for_memory_leaks(self) -> list[str]:
         """Check for potential memory leaks by comparing object counts."""
         current_objects = self._get_object_counts()
         leaks = []
@@ -131,13 +124,15 @@ class MemoryMonitor:
         for obj_type, current_count in current_objects.items():
             baseline_count = self.baseline_objects.get(obj_type, 0)
             if current_count - baseline_count > self.leak_threshold:
-                leak_info = f"Potential leak in {obj_type}: {current_count - baseline_count} more objects"
+                leak_info = (
+                    f"Potential leak in {obj_type}: {current_count - baseline_count} more objects"
+                )
                 leaks.append(leak_info)
                 memory_leaks_detected.inc()
 
         return leaks
 
-    def force_garbage_collection(self) -> Dict[str, int]:
+    def force_garbage_collection(self) -> dict[str, int]:
         """Force garbage collection and return collection statistics."""
         collected = {}
         for gen in range(3):
@@ -157,15 +152,15 @@ class MemoryMonitor:
 
         # Update Prometheus metrics
         stats = self.get_memory_stats()
-        memory_usage_gauge.labels(type='system').set(stats.used_memory)
-        memory_usage_gauge.labels(type='process').set(stats.process_memory)
+        memory_usage_gauge.labels(type="system").set(stats.used_memory)
+        memory_usage_gauge.labels(type="process").set(stats.process_memory)
 
         # Track peak memory usage
         if self.memory_history:
             peak_system = max(s.used_memory for s in self.memory_history)
             peak_process = max(s.process_memory for s in self.memory_history)
-            memory_peak_gauge.labels(type='system').set(peak_system)
-            memory_peak_gauge.labels(type='process').set(peak_process)
+            memory_peak_gauge.labels(type="system").set(peak_system)
+            memory_peak_gauge.labels(type="process").set(peak_process)
 
         logger.info("Memory optimization completed")
 
@@ -188,8 +183,8 @@ class MemoryMonitor:
                         logger.warning(f"Memory leaks detected: {leaks}")
 
                 # Update Prometheus metrics
-                memory_usage_gauge.labels(type='system').set(stats.used_memory)
-                memory_usage_gauge.labels(type='process').set(stats.process_memory)
+                memory_usage_gauge.labels(type="system").set(stats.used_memory)
+                memory_usage_gauge.labels(type="process").set(stats.process_memory)
 
                 # Update object count metrics
                 for obj_type, count in stats.object_counts.items():
@@ -200,7 +195,7 @@ class MemoryMonitor:
 
             time.sleep(self.check_interval)
 
-    def _get_object_counts(self) -> Dict[str, int]:
+    def _get_object_counts(self) -> dict[str, int]:
         """Get counts of Python objects by type."""
         objects = defaultdict(int)
         for obj in gc.get_objects():
@@ -253,7 +248,7 @@ def get_memory_stats() -> MemoryStats:
     return memory_monitor.get_memory_stats()
 
 
-def check_memory_leaks() -> List[str]:
+def check_memory_leaks() -> list[str]:
     """Check for memory leaks."""
     return memory_monitor.check_for_memory_leaks()
 

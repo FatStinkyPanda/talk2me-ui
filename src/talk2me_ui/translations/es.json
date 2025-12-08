@@ -1,74 +1,74 @@
 {
-    "app": {
-        "name": "Talk2Me UI",
-        "description": "Una interfaz web moderna para conversaciones y procesamiento de audio impulsado por IA"
-    },
-    "nav": {
-        "dashboard": "Panel de Control",
-        "voiceManagement": "Gestión de Voces",
-        "speechToText": "Voz a Texto",
-        "textToSpeech": "Texto a Voz",
-        "audiobookStudio": "Estudio de Audiolibros",
-        "soundLibrary": "Biblioteca de Sonidos",
-        "liveConversation": "Conversación en Vivo",
-        "apiDocs": "Documentos API",
-        "settings": "Configuración"
-    },
-    "auth": {
-        "login": "Iniciar Sesión",
-        "logout": "Cerrar Sesión",
-        "register": "Registrarse",
-        "username": "Usuario",
-        "email": "Correo Electrónico",
-        "password": "Contraseña",
-        "confirmPassword": "Confirmar Contraseña",
-        "usernameOrEmail": "Usuario o Correo Electrónico",
-        "loginToTalk2Me": "Iniciar Sesión en Talk2Me",
-        "dontHaveAccount": "¿No tienes una cuenta?",
-        "registerHere": "Regístrate aquí",
-        "welcome": "Bienvenido, %(username)s",
-        "invalidCredentials": "Credenciales inválidas",
-        "passwordsDontMatch": "Las contraseñas no coinciden",
-        "passwordTooShort": "La contraseña debe tener al menos 8 caracteres",
-        "registrationSuccessful": "Registro exitoso",
-        "loginSuccessful": "Inicio de sesión exitoso"
-    },
-    "status": {
-        "checking": "Verificando...",
-        "connected": "Conectado",
-        "disconnected": "Desconectado",
-        "processing": "Procesando...",
-        "completed": "Completado",
-        "failed": "Fallido"
-    },
-    "actions": {
-        "submit": "Enviar",
-        "cancel": "Cancelar",
-        "close": "Cerrar",
-        "ok": "Aceptar",
-        "save": "Guardar",
-        "delete": "Eliminar",
-        "edit": "Editar",
-        "create": "Crear",
-        "upload": "Subir",
-        "download": "Descargar"
-    },
-    "sidebar": {
-        "quickActions": "Acciones Rápidas",
-        "newTTS": "Nuevo TTS",
-        "createVoice": "Crear Voz",
-        "newAudiobook": "Nuevo Audiolibro",
-        "addSound": "Agregar Sonido",
-        "recentActivity": "Actividad Reciente",
-        "noRecentActivity": "Sin actividad reciente",
-        "systemInfo": "Información del Sistema",
-        "voices": "Voces:",
-        "projects": "Proyectos:",
-        "storage": "Almacenamiento:"
-    },
-    "modals": {
-        "error": "Error",
-        "success": "Éxito",
-        "progress": "Progreso"
-    }
+  "app": {
+    "name": "Talk2Me UI",
+    "description": "Una interfaz web moderna para conversaciones y procesamiento de audio impulsado por IA"
+  },
+  "nav": {
+    "dashboard": "Panel de Control",
+    "voiceManagement": "Gestión de Voces",
+    "speechToText": "Voz a Texto",
+    "textToSpeech": "Texto a Voz",
+    "audiobookStudio": "Estudio de Audiolibros",
+    "soundLibrary": "Biblioteca de Sonidos",
+    "liveConversation": "Conversación en Vivo",
+    "apiDocs": "Documentos API",
+    "settings": "Configuración"
+  },
+  "auth": {
+    "login": "Iniciar Sesión",
+    "logout": "Cerrar Sesión",
+    "register": "Registrarse",
+    "username": "Usuario",
+    "email": "Correo Electrónico",
+    "password": "Contraseña",
+    "confirmPassword": "Confirmar Contraseña",
+    "usernameOrEmail": "Usuario o Correo Electrónico",
+    "loginToTalk2Me": "Iniciar Sesión en Talk2Me",
+    "dontHaveAccount": "¿No tienes una cuenta?",
+    "registerHere": "Regístrate aquí",
+    "welcome": "Bienvenido, %(username)s",
+    "invalidCredentials": "Credenciales inválidas",
+    "passwordsDontMatch": "Las contraseñas no coinciden",
+    "passwordTooShort": "La contraseña debe tener al menos 8 caracteres",
+    "registrationSuccessful": "Registro exitoso",
+    "loginSuccessful": "Inicio de sesión exitoso"
+  },
+  "status": {
+    "checking": "Verificando...",
+    "connected": "Conectado",
+    "disconnected": "Desconectado",
+    "processing": "Procesando...",
+    "completed": "Completado",
+    "failed": "Fallido"
+  },
+  "actions": {
+    "submit": "Enviar",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "ok": "Aceptar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Crear",
+    "upload": "Subir",
+    "download": "Descargar"
+  },
+  "sidebar": {
+    "quickActions": "Acciones Rápidas",
+    "newTTS": "Nuevo TTS",
+    "createVoice": "Crear Voz",
+    "newAudiobook": "Nuevo Audiolibro",
+    "addSound": "Agregar Sonido",
+    "recentActivity": "Actividad Reciente",
+    "noRecentActivity": "Sin actividad reciente",
+    "systemInfo": "Información del Sistema",
+    "voices": "Voces:",
+    "projects": "Proyectos:",
+    "storage": "Almacenamiento:"
+  },
+  "modals": {
+    "error": "Error",
+    "success": "Éxito",
+    "progress": "Progreso"
+  }
 }

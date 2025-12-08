@@ -8,12 +8,9 @@ import hashlib
 import hmac
 import secrets
 import time
-from typing import Optional
 
-from fastapi import HTTPException, Request, Response
+from fastapi import HTTPException, Request
 from starlette.middleware.base import BaseHTTPMiddleware
-
-from .config import get_config
 
 
 class CSRFProtection:
@@ -46,11 +43,7 @@ class CSRFProtection:
         message = f"{session_id}:{timestamp}:{nonce}"
 
         # Create HMAC signature
-        signature = hmac.new(
-            self.secret_key,
-            message.encode(),
-            hashlib.sha256
-        ).hexdigest()
+        signature = hmac.new(self.secret_key, message.encode(), hashlib.sha256).hexdigest()
 
         # Return token: timestamp.nonce.signature
         return f"{timestamp}.{nonce}.{signature}"
@@ -67,7 +60,7 @@ class CSRFProtection:
         """
         try:
             # Parse token
-            parts = token.split('.')
+            parts = token.split(".")
             if len(parts) != 3:
                 return False
 
@@ -83,9 +76,7 @@ class CSRFProtection:
             # Recreate message and verify signature
             message = f"{session_id}:{timestamp_str}:{nonce}"
             expected_signature = hmac.new(
-                self.secret_key,
-                message.encode(),
-                hashlib.sha256
+                self.secret_key, message.encode(), hashlib.sha256
             ).hexdigest()
 
             return hmac.compare_digest(signature, expected_signature)
@@ -115,7 +106,7 @@ class CSRFProtection:
 class CSRFMiddleware(BaseHTTPMiddleware):
     """FastAPI middleware for CSRF protection."""
 
-    def __init__(self, app, secret_key: str, exempt_paths: Optional[list[str]] = None):
+    def __init__(self, app, secret_key: str, exempt_paths: list[str] | None = None):
         """Initialize CSRF middleware.
 
         Args:
@@ -141,18 +132,12 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         token = self._get_csrf_token(request)
 
         if not token:
-            raise HTTPException(
-                status_code=403,
-                detail="CSRF token missing"
-            )
+            raise HTTPException(status_code=403, detail="CSRF token missing")
 
         # Validate token
         session_id = self.csrf.get_session_id(request)
         if not self.csrf.validate_token(token, session_id):
-            raise HTTPException(
-                status_code=403,
-                detail="CSRF token invalid or expired"
-            )
+            raise HTTPException(status_code=403, detail="CSRF token invalid or expired")
 
         # Add CSRF token to request state for use in handlers
         request.state.csrf_token = token
@@ -161,7 +146,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         return response
 
-    def _get_csrf_token(self, request: Request) -> Optional[str]:
+    def _get_csrf_token(self, request: Request) -> str | None:
         """Extract CSRF token from request.
 
         Args:
@@ -176,7 +161,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             return str(token)
 
         # Check form data (for form submissions)
-        if hasattr(request, '_form') and request._form:
+        if hasattr(request, "_form") and request._form:
             form_token = request._form.get("csrf_token")
             return str(form_token) if form_token else None
 
@@ -189,6 +174,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 def get_csrf_protection() -> CSRFProtection:
     """Get the global CSRF protection instance."""
     import os
+
     secret_key = os.getenv("CSRF_SECRET", "default-csrf-secret-change-in-production")
     return CSRFProtection(secret_key)
 

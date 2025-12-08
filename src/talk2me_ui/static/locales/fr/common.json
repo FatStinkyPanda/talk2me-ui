@@ -1,30 +1,30 @@
 {
-    "status": {
-        "connected": "Connecté",
-        "disconnected": "Déconnecté"
-    },
-    "recording": {
-        "recordingStarted": "Enregistrement démarré",
-        "recordingStopped": "Enregistrement arrêté",
-        "startRecording": "Enregistrer",
-        "stopRecording": "Arrêter",
-        "clickToStartRecording": "Cliquez pour commencer l'enregistrement"
-    },
-    "modals": {
-        "error": "Erreur",
-        "success": "Succès",
-        "progress": "Progrès"
-    },
-    "actions": {
-        "submit": "Soumettre",
-        "cancel": "Annuler",
-        "close": "Fermer",
-        "ok": "OK",
-        "save": "Sauvegarder",
-        "delete": "Supprimer",
-        "edit": "Modifier",
-        "create": "Créer",
-        "upload": "Téléverser",
-        "download": "Télécharger"
-    }
+  "status": {
+    "connected": "Connecté",
+    "disconnected": "Déconnecté"
+  },
+  "recording": {
+    "recordingStarted": "Enregistrement démarré",
+    "recordingStopped": "Enregistrement arrêté",
+    "startRecording": "Enregistrer",
+    "stopRecording": "Arrêter",
+    "clickToStartRecording": "Cliquez pour commencer l'enregistrement"
+  },
+  "modals": {
+    "error": "Erreur",
+    "success": "Succès",
+    "progress": "Progrès"
+  },
+  "actions": {
+    "submit": "Soumettre",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "ok": "OK",
+    "save": "Sauvegarder",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "upload": "Téléverser",
+    "download": "Télécharger"
+  }
 }

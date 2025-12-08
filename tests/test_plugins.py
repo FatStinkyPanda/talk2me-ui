@@ -2,24 +2,19 @@
 
 import asyncio
 import json
-import pytest
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import AsyncMock, Mock, patch
 
-from src.talk2me_ui.plugins.plugin_manager import PluginManager
 from src.talk2me_ui.plugins.discovery import PluginDiscovery
-from src.talk2me_ui.plugins.lifecycle import PluginLifecycle
-from src.talk2me_ui.plugins.marketplace import PluginMarketplace
 from src.talk2me_ui.plugins.interfaces import (
+    PluginContext,
     PluginInterface,
     PluginMetadata,
-    PluginContext,
-    AudioProcessorPlugin,
-    UIComponentPlugin,
-    APIEndpointPlugin,
-    IntegrationPlugin,
 )
+from src.talk2me_ui.plugins.lifecycle import PluginLifecycle
+from src.talk2me_ui.plugins.marketplace import PluginMarketplace
+from src.talk2me_ui.plugins.plugin_manager import PluginManager
 
 
 class MockPlugin(PluginInterface):
@@ -47,12 +42,7 @@ class MockPlugin(PluginInterface):
         self.shutdown_called = True
 
     def get_config_schema(self):
-        return {
-            "type": "object",
-            "properties": {
-                "enabled": {"type": "boolean", "default": True}
-            }
-        }
+        return {"type": "object", "properties": {"enabled": {"type": "boolean", "default": True}}}
 
 
 class TestPluginDiscovery:
@@ -65,6 +55,7 @@ class TestPluginDiscovery:
     def teardown_method(self):
         # Clean up temp directory
         import shutil
+
         shutil.rmtree(self.temp_dir)
 
     def test_discover_plugins_empty_dir(self):
@@ -84,10 +75,10 @@ class TestPluginDiscovery:
             "version": "1.0.0",
             "description": "Test plugin",
             "author": "Test Author",
-            "type": "audio_processor"
+            "type": "audio_processor",
         }
 
-        with open(plugin_dir / "plugin.json", 'w') as f:
+        with open(plugin_dir / "plugin.json", "w") as f:
             json.dump(plugin_json, f)
 
         # Create plugin file
@@ -136,10 +127,10 @@ class TestPlugin(PluginInterface):
             "author": "Test Author",
             "type": "audio_processor",
             "dependencies": ["dep1"],
-            "tags": ["test"]
+            "tags": ["test"],
         }
 
-        with open(plugin_dir / "plugin.json", 'w') as f:
+        with open(plugin_dir / "plugin.json", "w") as f:
             json.dump(plugin_json, f)
 
         result = asyncio.run(self.discovery.get_plugin_info("test_plugin"))
@@ -159,9 +150,7 @@ class TestPluginLifecycle:
         """Test successful plugin activation."""
         plugin = MockPlugin()
 
-        result = asyncio.run(
-            self.lifecycle.activate_plugin("test_plugin", plugin, None)
-        )
+        result = asyncio.run(self.lifecycle.activate_plugin("test_plugin", plugin, None))
 
         assert result is True
         assert plugin.initialized is True
@@ -177,9 +166,7 @@ class TestPluginLifecycle:
 
         plugin.initialize = failing_initialize
 
-        result = asyncio.run(
-            self.lifecycle.activate_plugin("test_plugin", plugin, None)
-        )
+        result = asyncio.run(self.lifecycle.activate_plugin("test_plugin", plugin, None))
 
         assert result is False
         assert self.lifecycle.is_plugin_active("test_plugin") is False
@@ -192,9 +179,7 @@ class TestPluginLifecycle:
         asyncio.run(self.lifecycle.activate_plugin("test_plugin", plugin, None))
 
         # Then deactivate
-        result = asyncio.run(
-            self.lifecycle.deactivate_plugin("test_plugin", plugin)
-        )
+        result = asyncio.run(self.lifecycle.deactivate_plugin("test_plugin", plugin))
 
         assert result is True
         assert plugin.shutdown_called is True
@@ -213,9 +198,7 @@ class TestPluginLifecycle:
 
         plugin.shutdown = failing_shutdown
 
-        result = asyncio.run(
-            self.lifecycle.deactivate_plugin("test_plugin", plugin)
-        )
+        result = asyncio.run(self.lifecycle.deactivate_plugin("test_plugin", plugin))
 
         assert result is False
         # Should still be marked as inactive
@@ -232,10 +215,11 @@ class TestPluginManager:
 
     def teardown_method(self):
         import shutil
+
         shutil.rmtree(self.temp_dir)
 
-    @patch('src.talk2me_ui.plugins.plugin_manager.PluginDiscovery')
-    @patch('src.talk2me_ui.plugins.plugin_manager.PluginLifecycle')
+    @patch("src.talk2me_ui.plugins.plugin_manager.PluginDiscovery")
+    @patch("src.talk2me_ui.plugins.plugin_manager.PluginLifecycle")
     async def test_initialize(self, mock_lifecycle_class, mock_discovery_class):
         """Test plugin manager initialization."""
         mock_discovery = Mock()
@@ -275,23 +259,22 @@ class TestPluginMarketplace:
     def setup_method(self):
         self.temp_dir = Path(tempfile.mkdtemp())
         self.marketplace = PluginMarketplace(
-            marketplace_url="https://api.example.com",
-            plugins_dir=self.temp_dir
+            marketplace_url="https://api.example.com", plugins_dir=self.temp_dir
         )
 
     def teardown_method(self):
         import shutil
+
         shutil.rmtree(self.temp_dir)
 
-    @patch('aiohttp.ClientSession')
+    @patch("aiohttp.ClientSession")
     async def test_list_available_plugins(self, mock_session_class):
         """Test listing available plugins from marketplace."""
         mock_session = Mock()
         mock_response = Mock()
-        mock_response.json = AsyncMock(return_value={
-            "plugins": [{"name": "test_plugin"}],
-            "total": 1
-        })
+        mock_response.json = AsyncMock(
+            return_value={"plugins": [{"name": "test_plugin"}], "total": 1}
+        )
         mock_response.status = 200
         mock_session.get.return_value.__aenter__ = AsyncMock(return_value=mock_response)
         mock_session_class.return_value = mock_session
@@ -303,7 +286,7 @@ class TestPluginMarketplace:
         assert result["plugins"] == [{"name": "test_plugin"}]
         assert result["total"] == 1
 
-    @patch('aiohttp.ClientSession')
+    @patch("aiohttp.ClientSession")
     async def test_install_plugin_success(self, mock_session_class):
         """Test successful plugin installation."""
         # Mock session and response
@@ -317,7 +300,7 @@ class TestPluginMarketplace:
         await self.marketplace.initialize()
 
         # Mock zipfile to avoid actual file operations
-        with patch('zipfile.ZipFile') as mock_zip:
+        with patch("zipfile.ZipFile") as mock_zip:
             mock_zip.return_value.__enter__ = Mock()
             mock_zip.return_value.__exit__ = Mock()
             mock_zip.return_value.extractall = Mock()
@@ -337,10 +320,10 @@ class TestPluginMarketplace:
             "version": "1.0.0",
             "description": "Test plugin",
             "author": "Test Author",
-            "type": "audio_processor"
+            "type": "audio_processor",
         }
 
-        with open(plugin_dir / "plugin.json", 'w') as f:
+        with open(plugin_dir / "plugin.json", "w") as f:
             json.dump(metadata, f)
 
         result = await self.marketplace.get_installed_plugins()
@@ -381,7 +364,7 @@ class TestPluginInterfaces:
             dependencies=["dep1"],
             homepage="https://example.com",
             license="MIT",
-            tags=["test", "audio"]
+            tags=["test", "audio"],
         )
 
         assert metadata.name == "test_plugin"
@@ -396,7 +379,7 @@ class TestPluginInterfaces:
             database_manager=Mock(),
             api_client=Mock(),
             user_manager=Mock(),
-            cache_manager=Mock()
+            cache_manager=Mock(),
         )
 
         assert context.app_config["setting"] == "value"
@@ -415,6 +398,7 @@ class TestPluginSystemIntegration:
 
     def teardown_method(self):
         import shutil
+
         shutil.rmtree(self.temp_dir)
 
     async def test_load_plugin_success(self):
@@ -429,14 +413,14 @@ class TestPluginSystemIntegration:
             "version": "1.0.0",
             "description": "Test plugin",
             "author": "Test Author",
-            "type": "audio_processor"
+            "type": "audio_processor",
         }
 
-        with open(plugin_dir / "plugin.json", 'w') as f:
+        with open(plugin_dir / "plugin.json", "w") as f:
             json.dump(plugin_json, f)
 
         # Create plugin.py with a valid plugin class
-        plugin_code = '''
+        plugin_code = """
 from src.talk2me_ui.plugins.interfaces import PluginInterface, PluginMetadata
 
 class TestPlugin(PluginInterface):
@@ -458,13 +442,14 @@ class TestPlugin(PluginInterface):
 
     def get_config_schema(self):
         return {"type": "object"}
-'''
+"""
 
-        with open(plugin_dir / "plugin.py", 'w') as f:
+        with open(plugin_dir / "plugin.py", "w") as f:
             f.write(plugin_code)
 
         # Mock the _load_plugin_module to return our mock plugin
         original_load = self.manager._load_plugin_module
+
         async def mock_load(plugin_path, metadata):
             return MockPlugin()
 
@@ -488,10 +473,10 @@ class TestPlugin(PluginInterface):
             "version": "1.0.0",
             "description": "Dependency plugin",
             "author": "Test Author",
-            "type": "audio_processor"
+            "type": "audio_processor",
         }
 
-        with open(dep_dir / "plugin.json", 'w') as f:
+        with open(dep_dir / "plugin.json", "w") as f:
             json.dump(dep_json, f)
 
         # Create main plugin with dependency
@@ -504,10 +489,10 @@ class TestPlugin(PluginInterface):
             "description": "Main plugin",
             "author": "Test Author",
             "type": "audio_processor",
-            "dependencies": ["dependency_plugin"]
+            "dependencies": ["dependency_plugin"],
         }
 
-        with open(plugin_dir / "plugin.json", 'w') as f:
+        with open(plugin_dir / "plugin.json", "w") as f:
             json.dump(plugin_json, f)
 
         # Mock loading to return mock plugins

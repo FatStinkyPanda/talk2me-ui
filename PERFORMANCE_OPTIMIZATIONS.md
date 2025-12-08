@@ -16,11 +16,13 @@ The following performance optimizations have been implemented:
 ## 1. Response Caching
 
 ### Implementation
+
 - **File**: `src/talk2me_ui/cache.py`
 - **Decorator**: `@cached_api_response`
 - **Cache Instances**: `api_cache`, `voice_cache`
 
 ### Features
+
 - TTL-based expiration (configurable per endpoint)
 - LRU eviction policy
 - Automatic cache cleanup
@@ -41,6 +43,7 @@ async def get_voice_details(voice_id: str):
 ```
 
 ### Configuration
+
 - Default TTL: 300 seconds (5 minutes)
 - Max cache size: 1000 entries
 - Automatic cleanup interval: 60 seconds
@@ -48,16 +51,19 @@ async def get_voice_details(voice_id: str):
 ## 2. Lazy Loading
 
 ### Implementation
+
 - **File**: `src/talk2me_ui/templates/sounds.html`
 - **Features**: Pagination, infinite scroll, filter reset
 
 ### Features
+
 - Server-side pagination with configurable page sizes
 - Infinite scroll for seamless user experience
 - Filter state management
 - Loading indicators
 
 ### API Endpoints
+
 ```python
 @app.get("/api/sounds/effects")
 @cached_api_response(ttl=300)
@@ -66,6 +72,7 @@ async def list_sound_effects(page: int = 1, limit: int = 50):
 ```
 
 ### Frontend Implementation
+
 - Progressive loading of sound effects and background audio
 - Filter reset on new searches
 - Memory-efficient DOM updates
@@ -73,16 +80,19 @@ async def list_sound_effects(page: int = 1, limit: int = 50):
 ## 3. Asset Optimization
 
 ### Build Process
+
 - **Configuration**: `postcss.config.js`
 - **Scripts**: `package.json` build commands
 
 ### Features
+
 - CSS minification with PostCSS and CSSNano
 - JavaScript minification with Terser
 - Image compression with Imagemin (JPEG, PNG, SVG)
 - Autoprefixer for cross-browser compatibility
 
 ### Build Commands
+
 ```bash
 # Build all assets
 npm run build
@@ -102,6 +112,7 @@ npm run watch:js
 ```
 
 ### Production Assets
+
 - Development: `styles.css`, `app.js`
 - Production: `styles.min.css`, `app.min.js`
 - Automatic asset switching based on `APP_ENV` environment variable
@@ -109,15 +120,18 @@ npm run watch:js
 ## 4. Memory Monitoring
 
 ### Implementation
+
 - **File**: `src/talk2me_ui/memory_monitor.py`
 - **Features**: Real-time monitoring, leak detection, optimization
 
 ### Components
+
 - **MemoryMonitor**: Core monitoring class
 - **MemoryStats**: Statistics data structure
 - **Prometheus Metrics**: Integration with monitoring stack
 
 ### Features
+
 - Real-time memory usage tracking
 - Garbage collection monitoring
 - Memory leak detection
@@ -125,6 +139,7 @@ npm run watch:js
 - Prometheus metrics export
 
 ### API Endpoints
+
 ```python
 @app.post("/api/admin/optimize-memory")
 async def optimize_memory_endpoint():
@@ -132,6 +147,7 @@ async def optimize_memory_endpoint():
 ```
 
 ### Usage
+
 ```python
 from src.talk2me_ui.memory_monitor import memory_tracker
 
@@ -144,11 +160,13 @@ with memory_tracker("audio_processing"):
 ## 5. Audio Processing Optimization
 
 ### Memory Management
+
 - **Garbage Collection**: Automatic GC after large audio operations
 - **Streaming Processing**: Chunked audio file handling
 - **Temporary File Cleanup**: Automatic cleanup of temp files
 
 ### Implementation
+
 ```python
 # In audiobook processing
 combined_audio = mix_audio_events(audio_events)
@@ -162,11 +180,13 @@ combined_audio.export(buffer, format="wav")
 ```
 
 ### Large File Handling
+
 - **StreamingFileHandler**: Handles large file uploads without loading into memory
 - **ChunkedAudioProcessor**: Processes audio in chunks
 - **File Validation**: Size and type validation during streaming
 
 ### Usage
+
 ```python
 # Streaming file upload
 streaming_handler = get_streaming_handler()
@@ -184,18 +204,21 @@ finally:
 ## 6. Large File Handling
 
 ### Streaming Uploads
+
 - **Chunk Size**: 8KB chunks for efficient streaming
 - **Size Limits**: 50MB maximum file size
 - **Type Validation**: MIME type checking during upload
 - **Hash Verification**: SHA256 integrity checking
 
 ### Features
+
 - Memory-efficient file processing
 - Progress tracking
 - Automatic cleanup on failure
 - Temporary file management
 
 ### API Integration
+
 ```python
 @app.post("/api/sounds/effects")
 async def upload_sound_effect(
@@ -218,6 +241,7 @@ async def upload_sound_effect(
 ## Monitoring and Metrics
 
 ### Prometheus Metrics
+
 - `http_requests_total` - Request counts by endpoint
 - `http_request_duration_seconds` - Request duration histograms
 - `memory_usage_bytes` - Memory usage by type
@@ -227,6 +251,7 @@ async def upload_sound_effect(
 - `memory_leaks_detected_total` - Memory leak detections
 
 ### Health Checks
+
 - `/api/health` - Basic health status
 - `/metrics` - Prometheus metrics endpoint
 - Memory usage monitoring
@@ -235,6 +260,7 @@ async def upload_sound_effect(
 ## Configuration
 
 ### Environment Variables
+
 ```bash
 # Cache settings
 CACHE_TTL=300
@@ -250,6 +276,7 @@ CHUNK_SIZE=8192         # 8KB
 ```
 
 ### Build Configuration
+
 - PostCSS with CSSNano for CSS optimization
 - Terser for JavaScript minification
 - Imagemin plugins for image compression
@@ -257,11 +284,13 @@ CHUNK_SIZE=8192         # 8KB
 ## Testing
 
 ### Test Coverage
+
 - **test_memory_monitor.py**: Memory monitoring functionality
 - **test_file_handler.py**: File handling and streaming
 - **test_cache.py**: Caching mechanisms
 
 ### Performance Benchmarks
+
 - Cache hit rates > 80%
 - Memory usage reduction > 30%
 - Asset size reduction > 50%
@@ -270,12 +299,14 @@ CHUNK_SIZE=8192         # 8KB
 ## Best Practices
 
 ### Development
+
 1. Use `@cached_api_response` for expensive API calls
 2. Implement pagination for large datasets
 3. Run `npm run build` before production deployment
 4. Monitor memory usage in long-running processes
 
 ### Production
+
 1. Enable asset minification
 2. Configure appropriate cache TTLs
 3. Monitor Prometheus metrics
@@ -283,6 +314,7 @@ CHUNK_SIZE=8192         # 8KB
 5. Use streaming file handling for uploads > 1MB
 
 ### Maintenance
+
 1. Regular cache cleanup verification
 2. Memory leak monitoring
 3. Asset rebuild after CSS/JS changes
@@ -291,12 +323,14 @@ CHUNK_SIZE=8192         # 8KB
 ## Troubleshooting
 
 ### Common Issues
+
 - **High Memory Usage**: Check for memory leaks using `/api/admin/optimize-memory`
 - **Slow API Responses**: Verify cache hit rates and TTL settings
 - **Large File Upload Failures**: Check file size limits and streaming configuration
 - **Asset Loading Issues**: Ensure build process completed successfully
 
 ### Debug Commands
+
 ```bash
 # Check cache status
 curl http://localhost:8000/api/cache/status

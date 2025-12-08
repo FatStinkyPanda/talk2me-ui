@@ -1,8 +1,7 @@
 """Tests for caching functionality."""
 
-import asyncio
 import time
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -154,7 +153,7 @@ class TestCacheManagement:
         """Test voice cache instance."""
         assert isinstance(voice_cache, APICache)
 
-    @patch('src.talk2me_ui.cache.asyncio.create_task')
+    @patch("src.talk2me_ui.cache.asyncio.create_task")
     def test_start_cache_cleanup(self, mock_create_task):
         """Test starting cache cleanup."""
         start_cache_cleanup()
@@ -180,7 +179,7 @@ class TestCacheIntegration:
                 "user_id": user_id,
                 "category": category,
                 "data": f"response_{call_count}",
-                "cached": False
+                "cached": False,
             }
 
         # First call

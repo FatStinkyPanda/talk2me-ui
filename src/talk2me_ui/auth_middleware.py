@@ -5,7 +5,6 @@ and managing user sessions via secure cookies.
 """
 
 import logging
-from typing import Optional
 
 from fastapi import Request, Response
 from fastapi.responses import RedirectResponse
@@ -19,7 +18,7 @@ logger = logging.getLogger("talk2me_ui.auth_middleware")
 class AuthenticationMiddleware(BaseHTTPMiddleware):
     """Middleware for authentication and session management."""
 
-    def __init__(self, app, exclude_paths: Optional[list[str]] = None):
+    def __init__(self, app, exclude_paths: list[str] | None = None):
         """Initialize authentication middleware.
 
         Args:
@@ -33,7 +32,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             "/api/health",
             "/metrics",
             "/static",
-            "/favicon.ico"
+            "/favicon.ico",
         ]
 
     async def dispatch(self, request: Request, call_next):
@@ -69,7 +68,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 "username": user.username,
                 "path": request.url.path,
                 "method": request.method,
-            }
+            },
         )
 
         response = await call_next(request)
@@ -91,9 +90,10 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         # For API requests, return JSON
         if request.url.path.startswith("/api/"):
             from fastapi.responses import JSONResponse
+
             return JSONResponse(
                 status_code=401,
-                content={"error": "Authentication required", "message": "Please log in"}
+                content={"error": "Authentication required", "message": "Please log in"},
             )
 
         # For web requests, redirect to login
@@ -106,10 +106,10 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             key="session_id",
             value=session_cookie,
             httponly=True,  # Prevent JavaScript access
-            secure=True,     # HTTPS only in production
+            secure=True,  # HTTPS only in production
             samesite="lax",  # CSRF protection
             max_age=24 * 60 * 60,  # 24 hours
-            path="/"
+            path="/",
         )
 
 
@@ -124,5 +124,6 @@ def get_current_user_dependency(request: Request):
     user = getattr(request.state, "user", None)
     if not user:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=401, detail="Authentication required")
     return user

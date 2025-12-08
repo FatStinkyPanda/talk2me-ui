@@ -1,19 +1,13 @@
 """Tests for authentication system."""
 
 import pytest
-from pathlib import Path
-from unittest.mock import patch
 
 from talk2me_ui.auth import (
-    User,
-    Session,
-    UserManager,
     SessionManager,
-    user_manager,
-    session_manager,
+    User,
+    UserManager,
     generate_session_cookie,
     parse_session_cookie,
-    get_current_user,
 )
 
 
@@ -22,11 +16,7 @@ class TestUserModel:
 
     def test_user_creation(self):
         """Test user creation with valid data."""
-        user = User(
-            username="testuser",
-            email="test@example.com",
-            password_hash="$2b$12$test.hash"
-        )
+        user = User(username="testuser", email="test@example.com", password_hash="$2b$12$test.hash")
 
         assert user.username == "testuser"
         assert user.email == "test@example.com"
@@ -139,7 +129,7 @@ class TestSessionCookie:
     def test_generate_parse_cookie(self):
         """Test cookie generation and parsing."""
         session_id = "test-session-123"
-        cookie = generate_session_cookie(type('MockSession', (), {'id': session_id})())
+        cookie = generate_session_cookie(type("MockSession", (), {"id": session_id})())
 
         assert "." in cookie
         parsed_id = parse_session_cookie(cookie)

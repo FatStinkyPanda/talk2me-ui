@@ -1,10 +1,8 @@
 """Plugin discovery mechanism for finding and validating plugins."""
 
-import asyncio
 import json
 import logging
 from pathlib import Path
-from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +14,7 @@ class PluginDiscovery:
         self.plugins_dir = plugins_dir
         self.plugins_dir.mkdir(parents=True, exist_ok=True)
 
-    async def discover_plugins(self) -> List[str]:
+    async def discover_plugins(self) -> list[str]:
         """Discover all available plugins in the plugins directory.
 
         Returns:
@@ -29,7 +27,7 @@ class PluginDiscovery:
         plugin_names = []
 
         for item in self.plugins_dir.iterdir():
-            if item.is_dir() and not item.name.startswith('.'):
+            if item.is_dir() and not item.name.startswith("."):
                 if await self._is_valid_plugin(item):
                     plugin_names.append(item.name)
                 else:
@@ -50,7 +48,7 @@ class PluginDiscovery:
         plugin_path = self.plugins_dir / plugin_name
         return await self._is_valid_plugin(plugin_path)
 
-    async def get_plugin_info(self, plugin_name: str) -> Optional[dict]:
+    async def get_plugin_info(self, plugin_name: str) -> dict | None:
         """Get basic information about a plugin without loading it.
 
         Args:
@@ -68,7 +66,7 @@ class PluginDiscovery:
             return None
 
         try:
-            with open(metadata_file, 'r') as f:
+            with open(metadata_file) as f:
                 metadata = json.load(f)
 
             # Basic validation
@@ -94,7 +92,7 @@ class PluginDiscovery:
             logger.error(f"Failed to read plugin metadata for {plugin_name}: {e}")
             return None
 
-    async def list_plugin_files(self, plugin_name: str) -> List[str]:
+    async def list_plugin_files(self, plugin_name: str) -> list[str]:
         """List all files in a plugin directory.
 
         Args:
@@ -133,7 +131,7 @@ class PluginDiscovery:
 
         # Validate metadata file
         try:
-            with open(metadata_file, 'r') as f:
+            with open(metadata_file) as f:
                 metadata = json.load(f)
 
             # Check required fields

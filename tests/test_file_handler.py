@@ -1,9 +1,8 @@
 """Tests for file handling functionality."""
 
-import io
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -20,17 +19,17 @@ class TestStreamingFileHandler:
 
     def test_initialization(self):
         """Test StreamingFileHandler initialization."""
-        handler = StreamingFileHandler(chunk_size=1024, max_file_size=1024*1024)
+        handler = StreamingFileHandler(chunk_size=1024, max_file_size=1024 * 1024)
         assert handler.chunk_size == 1024
-        assert handler.max_file_size == 1024*1024
+        assert handler.max_file_size == 1024 * 1024
 
     def test_create_temp_file(self):
         """Test temporary file creation."""
         handler = StreamingFileHandler()
-        temp_path = handler.create_temp_file('.test')
+        temp_path = handler.create_temp_file(".test")
 
         assert temp_path.exists()
-        assert temp_path.suffix == '.test'
+        assert temp_path.suffix == ".test"
 
         # Clean up
         temp_path.unlink()
@@ -54,20 +53,18 @@ class TestStreamingFileHandler:
 
         # Create a mock upload file that returns data in chunks
         mock_file = Mock()
-        mock_file.content_type = 'audio/wav'
+        mock_file.content_type = "audio/wav"
         # Return data in chunks, then empty bytes to end
-        mock_file.read = AsyncMock(side_effect=[b'test audio ', b'data', b''])
+        mock_file.read = AsyncMock(side_effect=[b"test audio ", b"data", b""])
 
         destination = Path(tempfile.mktemp())
 
         try:
-            saved_path = await handler.validate_and_save_file(
-                mock_file, destination, {'audio/wav'}
-            )
+            saved_path = await handler.validate_and_save_file(mock_file, destination, {"audio/wav"})
 
             assert saved_path == destination
             assert destination.exists()
-            assert destination.read_bytes() == b'test audio data'
+            assert destination.read_bytes() == b"test audio data"
 
         finally:
             if destination.exists():
@@ -79,14 +76,12 @@ class TestStreamingFileHandler:
         handler = StreamingFileHandler()
 
         mock_file = Mock()
-        mock_file.content_type = 'text/plain'
+        mock_file.content_type = "text/plain"
 
         destination = Path(tempfile.mktemp())
 
         with pytest.raises(Exception):  # Should raise HTTPException
-            await handler.validate_and_save_file(
-                mock_file, destination, {'audio/wav'}
-            )
+            await handler.validate_and_save_file(mock_file, destination, {"audio/wav"})
 
     @pytest.mark.asyncio
     async def test_validate_and_save_file_too_large(self):
@@ -94,15 +89,13 @@ class TestStreamingFileHandler:
         handler = StreamingFileHandler(max_file_size=10)
 
         mock_file = Mock()
-        mock_file.content_type = 'audio/wav'
-        mock_file.read = AsyncMock(return_value=b'this is too long')
+        mock_file.content_type = "audio/wav"
+        mock_file.read = AsyncMock(return_value=b"this is too long")
 
         destination = Path(tempfile.mktemp())
 
         with pytest.raises(Exception):  # Should raise HTTPException
-            await handler.validate_and_save_file(
-                mock_file, destination, {'audio/wav'}
-            )
+            await handler.validate_and_save_file(mock_file, destination, {"audio/wav"})
 
     @pytest.mark.asyncio
     async def test_process_file_in_chunks(self):
@@ -110,12 +103,13 @@ class TestStreamingFileHandler:
         handler = StreamingFileHandler()
 
         # Create a test file
-        test_data = b'0123456789' * 10  # 100 bytes
+        test_data = b"0123456789" * 10  # 100 bytes
         temp_file = Path(tempfile.mktemp())
         temp_file.write_bytes(test_data)
 
         try:
             chunks = []
+
             async def async_processor(chunk):
                 return [chunk]
 
@@ -126,7 +120,7 @@ class TestStreamingFileHandler:
 
             # Should have processed in chunks
             assert len(chunks) > 1
-            assert b''.join(chunks) == test_data
+            assert b"".join(chunks) == test_data
 
         finally:
             temp_file.unlink()
@@ -148,7 +142,7 @@ class TestChunkedAudioProcessor:
         # Create test audio data that will be processed in chunks
         # Total data: b'chunk1_longerchunk2_longerchunk3_longer' (39 bytes)
         # With chunk_size=10, it will process in chunks of 10 bytes
-        audio_chunks = [b'chunk1_longer', b'chunk2_longer', b'chunk3_longer']
+        audio_chunks = [b"chunk1_longer", b"chunk2_longer", b"chunk3_longer"]
 
         async def audio_generator():
             for chunk in audio_chunks:

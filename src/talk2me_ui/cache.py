@@ -6,11 +6,10 @@ repeated API calls and expensive computations.
 
 import asyncio
 import hashlib
-import json
 import logging
 import time
-from typing import Any, Dict, Optional, Tuple
 from functools import wraps
+from typing import Any
 
 logger = logging.getLogger("talk2me_ui.cache")
 
@@ -28,7 +27,7 @@ class TTLCache:
             default_ttl: Default time-to-live in seconds for cache entries
         """
         self.default_ttl = default_ttl
-        self._cache: Dict[str, Tuple[Any, float]] = {}
+        self._cache: dict[str, tuple[Any, float]] = {}
         self._lock = asyncio.Lock()
 
     def _make_key(self, *args, **kwargs) -> str:
@@ -39,7 +38,7 @@ class TTLCache:
         key_string = "|".join(str(part) for part in key_parts)
         return hashlib.md5(key_string.encode()).hexdigest()
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """Get a value from the cache.
 
         Args:
@@ -60,7 +59,7 @@ class TTLCache:
 
             return value
 
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> None:
         """Set a value in the cache.
 
         Args:
@@ -114,7 +113,7 @@ class TTLCache:
 
             return len(expired_keys)
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get cache statistics.
 
         Returns:
@@ -142,7 +141,7 @@ voice_cache = TTLCache(default_ttl=3600)  # 1 hour for voice data
 audio_cache = TTLCache(default_ttl=1800)  # 30 minutes for audio processing results
 
 
-def cached_api_response(ttl: Optional[int] = None, cache_instance: Optional[TTLCache] = None):
+def cached_api_response(ttl: int | None = None, cache_instance: TTLCache | None = None):
     """Decorator to cache API responses.
 
     Args:
@@ -152,6 +151,7 @@ def cached_api_response(ttl: Optional[int] = None, cache_instance: Optional[TTLC
     Returns:
         Decorated function
     """
+
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -174,10 +174,11 @@ def cached_api_response(ttl: Optional[int] = None, cache_instance: Optional[TTLC
             return result
 
         return wrapper
+
     return decorator
 
 
-def invalidate_cache(cache_instance: Optional[TTLCache] = None, pattern: Optional[str] = None):
+def invalidate_cache(cache_instance: TTLCache | None = None, pattern: str | None = None):
     """Decorator to invalidate cache entries after function execution.
 
     Args:
@@ -187,6 +188,7 @@ def invalidate_cache(cache_instance: Optional[TTLCache] = None, pattern: Optiona
     Returns:
         Decorated function
     """
+
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -209,6 +211,7 @@ def invalidate_cache(cache_instance: Optional[TTLCache] = None, pattern: Optiona
             return result
 
         return wrapper
+
     return decorator
 
 

@@ -6,12 +6,9 @@ features including password hashing with bcrypt and secure session cookies.
 
 import json
 import logging
-import os
 import secrets
-import string
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Optional
 from uuid import uuid4
 
 import bcrypt
@@ -28,17 +25,19 @@ class User(BaseModel):
     email: EmailStr
     password_hash: str
     role_id: str
-    role_name: Optional[str] = None
+    role_name: str | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     is_active: bool = True
-    last_login: Optional[datetime] = None
+    last_login: datetime | None = None
 
     @field_validator("username")
     @classmethod
     def validate_username(cls, v: str) -> str:
         """Validate username format."""
         if not v.replace("_", "").replace("-", "").isalnum():
-            raise ValueError("Username must contain only letters, numbers, underscores, and hyphens")
+            raise ValueError(
+                "Username must contain only letters, numbers, underscores, and hyphens"
+            )
         return v.lower()
 
     @field_validator("password_hash")
@@ -57,8 +56,8 @@ class Session(BaseModel):
     user_id: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     expires_at: datetime
-    ip_address: Optional[str] = None
-    user_agent: Optional[str] = None
+    ip_address: str | None = None
+    user_agent: str | None = None
 
     @property
     def is_expired(self) -> bool:
@@ -78,14 +77,14 @@ class UserManager:
         self.data_dir = data_dir
         self.users_file = data_dir / "users.json"
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        self._users: Dict[str, User] = {}
+        self._users: dict[str, User] = {}
         self._load_users()
 
     def _load_users(self) -> None:
         """Load users from storage."""
         if self.users_file.exists():
             try:
-                with open(self.users_file, "r") as f:
+                with open(self.users_file) as f:
                     data = json.load(f)
                     for user_data in data.values():
                         user = User(**user_data)
@@ -102,8 +101,11 @@ class UserManager:
         """Save users to storage."""
         try:
             # Only save users by ID to avoid duplicates
-            users_by_id = {uid: user.model_dump() for uid, user in self._users.items()
-                          if isinstance(uid, str) and len(uid) == 36}  # UUID length
+            users_by_id = {
+                uid: user.model_dump()
+                for uid, user in self._users.items()
+                if isinstance(uid, str) and len(uid) == 36
+            }  # UUID length
             with open(self.users_file, "w") as f:
                 json.dump(users_by_id, f, indent=2, default=str)
         except Exception as e:
@@ -129,11 +131,7 @@ class UserManager:
             raise ValueError("Email already exists")
 
         password_hash = self._hash_password(password)
-        user = User(
-            username=username,
-            email=email,
-            password_hash=password_hash
-        )
+        user = User(username=username, email=email, password_hash=password_hash)
 
         self._users[user.id] = user
         self._users[user.username] = user
@@ -143,19 +141,19 @@ class UserManager:
         logger.info(f"Created user: {username} ({email})")
         return user
 
-    def get_user_by_id(self, user_id: str) -> Optional[User]:
+    def get_user_by_id(self, user_id: str) -> User | None:
         """Get user by ID."""
         return self._users.get(user_id)
 
-    def get_user_by_username(self, username: str) -> Optional[User]:
+    def get_user_by_username(self, username: str) -> User | None:
         """Get user by username."""
         return self._users.get(username.lower())
 
-    def get_user_by_email(self, email: str) -> Optional[User]:
+    def get_user_by_email(self, email: str) -> User | None:
         """Get user by email."""
         return self._users.get(email.lower())
 
-    def authenticate_user(self, username_or_email: str, password: str) -> Optional[User]:
+    def authenticate_user(self, username_or_email: str, password: str) -> User | None:
         """Authenticate user with username/email and password.
 
         Args:
@@ -165,7 +163,9 @@ class UserManager:
         Returns:
             User if authentication successful, None otherwise
         """
-        user = self.get_user_by_username(username_or_email) or self.get_user_by_email(username_or_email)
+        user = self.get_user_by_username(username_or_email) or self.get_user_by_email(
+            username_or_email
+        )
         if not user or not user.is_active:
             return None
 
@@ -178,7 +178,7 @@ class UserManager:
 
         return user
 
-    def update_user(self, user_id: str, **updates) -> Optional[User]:
+    def update_user(self, user_id: str, **updates) -> User | None:
         """Update user information."""
         user = self.get_user_by_id(user_id)
         if not user:
@@ -223,7 +223,7 @@ class SessionManager:
         self.sessions_file = data_dir / "sessions.json"
         self.session_timeout = session_timeout
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        self._sessions: Dict[str, Session] = {}
+        self._sessions: dict[str, Session] = {}
         self._load_sessions()
         self._cleanup_expired_sessions()
 
@@ -231,7 +231,7 @@ class SessionManager:
         """Load sessions from storage."""
         if self.sessions_file.exists():
             try:
-                with open(self.sessions_file, "r") as f:
+                with open(self.sessions_file) as f:
                     data = json.load(f)
                     for session_data in data.values():
                         session = Session(**session_data)
@@ -260,8 +260,9 @@ class SessionManager:
             self._save_sessions()
             logger.info(f"Cleaned up {len(expired)} expired sessions")
 
-    def create_session(self, user_id: str, ip_address: Optional[str] = None,
-                      user_agent: Optional[str] = None) -> Session:
+    def create_session(
+        self, user_id: str, ip_address: str | None = None, user_agent: str | None = None
+    ) -> Session:
         """Create a new session for user.
 
         Args:
@@ -274,10 +275,7 @@ class SessionManager:
         """
         expires_at = datetime.utcnow() + timedelta(seconds=self.session_timeout)
         session = Session(
-            user_id=user_id,
-            expires_at=expires_at,
-            ip_address=ip_address,
-            user_agent=user_agent
+            user_id=user_id, expires_at=expires_at, ip_address=ip_address, user_agent=user_agent
         )
 
         self._sessions[session.id] = session
@@ -286,7 +284,7 @@ class SessionManager:
         logger.info(f"Created session for user {user_id}")
         return session
 
-    def get_session(self, session_id: str) -> Optional[Session]:
+    def get_session(self, session_id: str) -> Session | None:
         """Get session by ID."""
         session = self._sessions.get(session_id)
         if session and session.is_expired:
@@ -298,7 +296,7 @@ class SessionManager:
         """Get all active sessions for a user."""
         return [s for s in self._sessions.values() if s.user_id == user_id and not s.is_expired]
 
-    def extend_session(self, session_id: str) -> Optional[Session]:
+    def extend_session(self, session_id: str) -> Session | None:
         """Extend session expiration."""
         session = self.get_session(session_id)
         if session:
@@ -331,12 +329,13 @@ class SessionManager:
 
 
 # Global instances
-from .db_managers import db_user_manager, db_session_manager
+from .db_managers import db_session_manager, db_user_manager
+
 user_manager = db_user_manager
 session_manager = db_session_manager
 
 
-def get_current_user(session_id: str) -> Optional[User]:
+def get_current_user(session_id: str) -> User | None:
     """Get current user from session ID.
 
     Args:
@@ -372,7 +371,7 @@ def generate_session_cookie(session: Session) -> str:
     return f"{session.id}.{secrets.token_hex(16)}"
 
 
-def parse_session_cookie(cookie_value: str) -> Optional[str]:
+def parse_session_cookie(cookie_value: str) -> str | None:
     """Parse session ID from cookie value."""
     if "." not in cookie_value:
         return None

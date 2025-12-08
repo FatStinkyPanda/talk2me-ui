@@ -6,9 +6,18 @@ database initialization, and session management.
 
 import os
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, create_engine
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    create_engine,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 
@@ -52,7 +61,7 @@ class Permission(Base):
     name = Column(String(100), unique=True, index=True, nullable=False)
     description = Column(Text, nullable=True)
     resource = Column(String(50), nullable=False)  # e.g., 'stt', 'tts', 'users'
-    action = Column(String(50), nullable=False)    # e.g., 'use', 'manage', 'view'
+    action = Column(String(50), nullable=False)  # e.g., 'use', 'manage', 'view'
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships

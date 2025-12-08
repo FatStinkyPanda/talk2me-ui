@@ -1,74 +1,74 @@
 {
-    "app": {
-        "name": "Talk2Me UI",
-        "description": "A modern web interface for AI-powered conversations and audio processing"
-    },
-    "nav": {
-        "dashboard": "Dashboard",
-        "voiceManagement": "Voice Management",
-        "speechToText": "Speech-to-Text",
-        "textToSpeech": "Text-to-Speech",
-        "audiobookStudio": "Audiobook Studio",
-        "soundLibrary": "Sound Library",
-        "liveConversation": "Live Conversation",
-        "apiDocs": "API Docs",
-        "settings": "Settings"
-    },
-    "auth": {
-        "login": "Login",
-        "logout": "Logout",
-        "register": "Register",
-        "username": "Username",
-        "email": "Email",
-        "password": "Password",
-        "confirmPassword": "Confirm Password",
-        "usernameOrEmail": "Username or Email",
-        "loginToTalk2Me": "Login to Talk2Me",
-        "dontHaveAccount": "Don't have an account?",
-        "registerHere": "Register here",
-        "welcome": "Welcome, %(username)s",
-        "invalidCredentials": "Invalid credentials",
-        "passwordsDontMatch": "Passwords do not match",
-        "passwordTooShort": "Password must be at least 8 characters",
-        "registrationSuccessful": "Registration successful",
-        "loginSuccessful": "Login successful"
-    },
-    "status": {
-        "checking": "Checking...",
-        "connected": "Connected",
-        "disconnected": "Disconnected",
-        "processing": "Processing...",
-        "completed": "Completed",
-        "failed": "Failed"
-    },
-    "actions": {
-        "submit": "Submit",
-        "cancel": "Cancel",
-        "close": "Close",
-        "ok": "OK",
-        "save": "Save",
-        "delete": "Delete",
-        "edit": "Edit",
-        "create": "Create",
-        "upload": "Upload",
-        "download": "Download"
-    },
-    "sidebar": {
-        "quickActions": "Quick Actions",
-        "newTTS": "New TTS",
-        "createVoice": "Create Voice",
-        "newAudiobook": "New Audiobook",
-        "addSound": "Add Sound",
-        "recentActivity": "Recent Activity",
-        "noRecentActivity": "No recent activity",
-        "systemInfo": "System Info",
-        "voices": "Voices:",
-        "projects": "Projects:",
-        "storage": "Storage:"
-    },
-    "modals": {
-        "error": "Error",
-        "success": "Success",
-        "progress": "Progress"
-    }
+  "app": {
+    "name": "Talk2Me UI",
+    "description": "A modern web interface for AI-powered conversations and audio processing"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "voiceManagement": "Voice Management",
+    "speechToText": "Speech-to-Text",
+    "textToSpeech": "Text-to-Speech",
+    "audiobookStudio": "Audiobook Studio",
+    "soundLibrary": "Sound Library",
+    "liveConversation": "Live Conversation",
+    "apiDocs": "API Docs",
+    "settings": "Settings"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "username": "Username",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "usernameOrEmail": "Username or Email",
+    "loginToTalk2Me": "Login to Talk2Me",
+    "dontHaveAccount": "Don't have an account?",
+    "registerHere": "Register here",
+    "welcome": "Welcome, %(username)s",
+    "invalidCredentials": "Invalid credentials",
+    "passwordsDontMatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "registrationSuccessful": "Registration successful",
+    "loginSuccessful": "Login successful"
+  },
+  "status": {
+    "checking": "Checking...",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "processing": "Processing...",
+    "completed": "Completed",
+    "failed": "Failed"
+  },
+  "actions": {
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "close": "Close",
+    "ok": "OK",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "upload": "Upload",
+    "download": "Download"
+  },
+  "sidebar": {
+    "quickActions": "Quick Actions",
+    "newTTS": "New TTS",
+    "createVoice": "Create Voice",
+    "newAudiobook": "New Audiobook",
+    "addSound": "Add Sound",
+    "recentActivity": "Recent Activity",
+    "noRecentActivity": "No recent activity",
+    "systemInfo": "System Info",
+    "voices": "Voices:",
+    "projects": "Projects:",
+    "storage": "Storage:"
+  },
+  "modals": {
+    "error": "Error",
+    "success": "Success",
+    "progress": "Progress"
+  }
 }

@@ -5,12 +5,11 @@ and memory-efficient file operations for large audio files.
 """
 
 import hashlib
-import io
 import logging
 import os
 import tempfile
+from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import AsyncGenerator, BinaryIO, Optional
 
 import aiofiles
 from fastapi import HTTPException, UploadFile
@@ -26,10 +25,7 @@ class StreamingFileHandler:
         self.max_file_size = max_file_size
 
     async def validate_and_save_file(
-        self,
-        file: UploadFile,
-        destination: Path,
-        allowed_types: Optional[set[str]] = None
+        self, file: UploadFile, destination: Path, allowed_types: set[str] | None = None
     ) -> Path:
         """Validate and save an uploaded file with streaming.
 
@@ -48,7 +44,7 @@ class StreamingFileHandler:
         if allowed_types and file.content_type not in allowed_types:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid file type: {file.content_type}. Allowed: {', '.join(allowed_types)}"
+                detail=f"Invalid file type: {file.content_type}. Allowed: {', '.join(allowed_types)}",
             )
 
         # Create destination directory
@@ -59,7 +55,7 @@ class StreamingFileHandler:
         hasher = hashlib.sha256()
 
         try:
-            async with aiofiles.open(destination, 'wb') as f:
+            async with aiofiles.open(destination, "wb") as f:
                 while chunk := await file.read(self.chunk_size):
                     total_size += len(chunk)
 
@@ -69,7 +65,7 @@ class StreamingFileHandler:
                         destination.unlink(missing_ok=True)
                         raise HTTPException(
                             status_code=413,
-                            detail=f"File too large. Maximum size: {self.max_file_size} bytes"
+                            detail=f"File too large. Maximum size: {self.max_file_size} bytes",
                         )
 
                     await f.write(chunk)
@@ -95,10 +91,7 @@ class StreamingFileHandler:
         return destination
 
     async def process_file_in_chunks(
-        self,
-        file_path: Path,
-        processor_func,
-        chunk_size: Optional[int] = None
+        self, file_path: Path, processor_func, chunk_size: int | None = None
     ) -> AsyncGenerator[bytes, None]:
         """Process a file in chunks to avoid loading it entirely into memory.
 
@@ -113,7 +106,7 @@ class StreamingFileHandler:
         chunk_size = chunk_size or self.chunk_size
 
         try:
-            async with aiofiles.open(file_path, 'rb') as f:
+            async with aiofiles.open(file_path, "rb") as f:
                 while chunk := await f.read(chunk_size):
                     processed_chunk = await processor_func(chunk)
                     if processed_chunk:
@@ -157,9 +150,7 @@ class ChunkedAudioProcessor:
         self.chunk_size = chunk_size
 
     async def process_audio_stream(
-        self,
-        audio_data: AsyncGenerator[bytes, None],
-        sample_rate: int = 22050
+        self, audio_data: AsyncGenerator[bytes, None], sample_rate: int = 22050
     ) -> AsyncGenerator[bytes, None]:
         """Process audio data stream with memory-efficient operations.
 
@@ -182,10 +173,10 @@ class ChunkedAudioProcessor:
             # Process when buffer reaches a certain size
             if len(buffer) >= self.chunk_size:
                 # Process the chunk (placeholder logic)
-                processed_chunk = self._process_audio_chunk(bytes(buffer[:self.chunk_size]))
+                processed_chunk = self._process_audio_chunk(bytes(buffer[: self.chunk_size]))
 
                 # Keep remainder in buffer
-                buffer = buffer[self.chunk_size:]
+                buffer = buffer[self.chunk_size :]
 
                 if processed_chunk:
                     yield processed_chunk

@@ -242,9 +242,13 @@ try:
     app.openapi_schema = custom_openapi
     logging.getLogger("talk2me_ui.main").info("Custom OpenAPI specification loaded successfully")
 except FileNotFoundError:
-    logging.getLogger("talk2me_ui.main").info("openapi.yaml not found, using default OpenAPI schema")
+    logging.getLogger("talk2me_ui.main").info(
+        "openapi.yaml not found, using default OpenAPI schema"
+    )
 except Exception as e:
-    logging.getLogger("talk2me_ui.main").warning(f"Failed to load custom OpenAPI spec: {e}, using default schema")
+    logging.getLogger("talk2me_ui.main").warning(
+        f"Failed to load custom OpenAPI spec: {e}, using default schema"
+    )
 
 # Configure Jinja2 templates with CSRF and i18n context
 templates = Jinja2Templates(directory="src/talk2me_ui/templates")

@@ -2,23 +2,23 @@
 
 import asyncio
 import importlib.util
-import logging
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Type
 import json
+import logging
 import sys
+from pathlib import Path
+from typing import Any
 
-from .interfaces import (
-    PluginInterface,
-    PluginMetadata,
-    PluginContext,
-    PluginLoadContext,
-    AudioProcessorPlugin,
-    UIComponentPlugin,
-    APIEndpointPlugin,
-    IntegrationPlugin,
-)
 from .discovery import PluginDiscovery
+from .interfaces import (
+    APIEndpointPlugin,
+    AudioProcessorPlugin,
+    IntegrationPlugin,
+    PluginContext,
+    PluginInterface,
+    PluginLoadContext,
+    PluginMetadata,
+    UIComponentPlugin,
+)
 from .lifecycle import PluginLifecycle
 
 logger = logging.getLogger(__name__)
@@ -34,19 +34,19 @@ class PluginManager:
         self.lifecycle = PluginLifecycle()
 
         # Plugin storage
-        self.loaded_plugins: Dict[str, PluginInterface] = {}
-        self.plugin_configs: Dict[str, Dict[str, Any]] = {}
-        self.plugin_metadata: Dict[str, PluginMetadata] = {}
+        self.loaded_plugins: dict[str, PluginInterface] = {}
+        self.plugin_configs: dict[str, dict[str, Any]] = {}
+        self.plugin_metadata: dict[str, PluginMetadata] = {}
 
         # Plugin type registries
-        self.audio_processors: Dict[str, AudioProcessorPlugin] = {}
-        self.ui_components: Dict[str, UIComponentPlugin] = {}
-        self.api_endpoints: Dict[str, APIEndpointPlugin] = {}
-        self.integrations: Dict[str, IntegrationPlugin] = {}
+        self.audio_processors: dict[str, AudioProcessorPlugin] = {}
+        self.ui_components: dict[str, UIComponentPlugin] = {}
+        self.api_endpoints: dict[str, APIEndpointPlugin] = {}
+        self.integrations: dict[str, IntegrationPlugin] = {}
 
         # Plugin dependencies
-        self.plugin_dependencies: Dict[str, List[str]] = {}
-        self.reverse_dependencies: Dict[str, List[str]] = {}
+        self.plugin_dependencies: dict[str, list[str]] = {}
+        self.reverse_dependencies: dict[str, list[str]] = {}
 
     async def initialize(self) -> None:
         """Initialize the plugin manager and load all available plugins."""
@@ -86,7 +86,7 @@ class PluginManager:
 
         logger.info("Plugin manager shutdown complete")
 
-    async def load_plugin(self, plugin_name: str, config: Optional[Dict[str, Any]] = None) -> bool:
+    async def load_plugin(self, plugin_name: str, config: dict[str, Any] | None = None) -> bool:
         """Load a specific plugin by name.
 
         Args:
@@ -155,7 +155,9 @@ class PluginManager:
             if plugin_name in self.reverse_dependencies:
                 dependents = self.reverse_dependencies[plugin_name]
                 if dependents:
-                    logger.error(f"Cannot unload plugin {plugin_name}: still has dependents: {dependents}")
+                    logger.error(
+                        f"Cannot unload plugin {plugin_name}: still has dependents: {dependents}"
+                    )
                     return False
 
             # Shutdown plugin
@@ -171,11 +173,11 @@ class PluginManager:
             logger.error(f"Failed to unload plugin {plugin_name}: {e}", exc_info=True)
             return False
 
-    def get_plugin(self, plugin_name: str) -> Optional[PluginInterface]:
+    def get_plugin(self, plugin_name: str) -> PluginInterface | None:
         """Get a loaded plugin instance by name."""
         return self.loaded_plugins.get(plugin_name)
 
-    def get_plugins_by_type(self, plugin_type: str) -> List[PluginInterface]:
+    def get_plugins_by_type(self, plugin_type: str) -> list[PluginInterface]:
         """Get all loaded plugins of a specific type."""
         if plugin_type == "audio_processor":
             return list(self.audio_processors.values())
@@ -188,11 +190,11 @@ class PluginManager:
         else:
             return []
 
-    def get_plugin_metadata(self, plugin_name: str) -> Optional[PluginMetadata]:
+    def get_plugin_metadata(self, plugin_name: str) -> PluginMetadata | None:
         """Get metadata for a plugin."""
         return self.plugin_metadata.get(plugin_name)
 
-    def list_loaded_plugins(self) -> List[str]:
+    def list_loaded_plugins(self) -> list[str]:
         """List names of all loaded plugins."""
         return list(self.loaded_plugins.keys())
 
@@ -201,13 +203,13 @@ class PluginManager:
         config_file = self.plugins_dir / "plugins.json"
         if config_file.exists():
             try:
-                with open(config_file, 'r') as f:
+                with open(config_file) as f:
                     self.plugin_configs = json.load(f)
                 logger.info("Loaded plugin configurations")
             except Exception as e:
                 logger.error(f"Failed to load plugin configurations: {e}")
 
-    async def _load_plugin_metadata(self, plugin_path: Path) -> Optional[PluginMetadata]:
+    async def _load_plugin_metadata(self, plugin_path: Path) -> PluginMetadata | None:
         """Load metadata for a plugin."""
         metadata_file = plugin_path / "plugin.json"
         if not metadata_file.exists():
@@ -215,7 +217,7 @@ class PluginManager:
             return None
 
         try:
-            with open(metadata_file, 'r') as f:
+            with open(metadata_file) as f:
                 metadata_dict = json.load(f)
 
             metadata = PluginMetadata(
@@ -245,7 +247,9 @@ class PluginManager:
                 return False
         return True
 
-    async def _load_plugin_module(self, plugin_path: Path, metadata: PluginMetadata) -> Optional[PluginInterface]:
+    async def _load_plugin_module(
+        self, plugin_path: Path, metadata: PluginMetadata
+    ) -> PluginInterface | None:
         """Load a plugin module and instantiate the plugin class."""
         # Find the main plugin file
         plugin_file = None
@@ -273,9 +277,11 @@ class PluginManager:
             plugin_class = None
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
-                if (isinstance(attr, type) and
-                    issubclass(attr, PluginInterface) and
-                    attr != PluginInterface):
+                if (
+                    isinstance(attr, type)
+                    and issubclass(attr, PluginInterface)
+                    and attr != PluginInterface
+                ):
                     plugin_class = attr
                     break
 
@@ -291,7 +297,7 @@ class PluginManager:
             logger.error(f"Failed to load plugin module {plugin_file}: {e}", exc_info=True)
             return None
 
-    def _build_dependency_graph(self, available_plugins: List[str]) -> None:
+    def _build_dependency_graph(self, available_plugins: list[str]) -> None:
         """Build dependency graph for plugins."""
         # This is a simplified version - in production you'd use topological sort
         self.plugin_dependencies = {}
@@ -307,7 +313,7 @@ class PluginManager:
                         self.reverse_dependencies[dep] = []
                     self.reverse_dependencies[dep].append(plugin_name)
 
-    async def _load_plugins_in_order(self, available_plugins: List[str]) -> None:
+    async def _load_plugins_in_order(self, available_plugins: list[str]) -> None:
         """Load plugins in dependency order."""
         # Simplified loading - load all at once
         # In production, you'd implement topological sort
@@ -315,7 +321,9 @@ class PluginManager:
             config = self.plugin_configs.get(plugin_name, {})
             await self.load_plugin(plugin_name, config)
 
-    def _register_plugin(self, plugin_name: str, plugin_instance: PluginInterface, metadata: PluginMetadata) -> None:
+    def _register_plugin(
+        self, plugin_name: str, plugin_instance: PluginInterface, metadata: PluginMetadata
+    ) -> None:
         """Register a plugin in the appropriate type registry."""
         self.loaded_plugins[plugin_name] = plugin_instance
         self.plugin_metadata[plugin_name] = metadata

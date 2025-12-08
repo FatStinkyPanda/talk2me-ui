@@ -5,7 +5,6 @@ against common web vulnerabilities and implementing security best practices.
 """
 
 import logging
-from typing import Optional
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -16,7 +15,7 @@ logger = logging.getLogger(__name__)
 class SecurityMiddleware(BaseHTTPMiddleware):
     """Additional security middleware for best practices."""
 
-    def __init__(self, app, allowed_hosts: Optional[list[str]] = None):
+    def __init__(self, app, allowed_hosts: list[str] | None = None):
         """Initialize security middleware.
 
         Args:
@@ -65,6 +64,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             if not allowed:
                 logger.warning(f"Blocked request with suspicious host header: {host}")
                 from fastapi import HTTPException
+
                 raise HTTPException(status_code=400, detail="Invalid host header")
 
     async def _check_suspicious_patterns(self, request: Request) -> None:
@@ -74,6 +74,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         if ".." in path or "%2e%2e" in path.lower() or "%2e%2e%2f" in path.lower():
             logger.warning(f"Potential directory traversal attempt: {path}")
             from fastapi import HTTPException
+
             raise HTTPException(status_code=400, detail="Invalid request path")
 
         # Check for suspicious user agents (basic check)
@@ -93,6 +94,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             if pattern.lower() in user_agent.lower():
                 logger.warning(f"Suspicious user agent detected: {user_agent}")
                 from fastapi import HTTPException
+
                 raise HTTPException(status_code=403, detail="Access denied")
 
     def _add_security_headers(self, response: Response) -> None:
@@ -214,6 +216,7 @@ class ContentSecurityMiddleware(BaseHTTPMiddleware):
                 if size > self.max_request_size:
                     logger.warning(f"Request too large: {size} bytes")
                     from fastapi import HTTPException
+
                     raise HTTPException(status_code=413, detail="Request too large")
             except ValueError:
                 pass  # Invalid content-length, let FastAPI handle it
